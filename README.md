@@ -1,2 +1,11 @@
 # project-03-vibration-diagnosis
 D1 test recording and analysis
+# 项目三：基于手机内置传感器的日常旋转机械异常声振诊断仪
+
+## 阶段一：数据采集 (20分)
+- 使用 OPPO Reno 15 手机麦克风采集。
+- 数据包含：低速（52dB）、高速（57dB）、受阻异常（60dB）3段实况视频。
+
+## 阶段二：特征提取代码 (20分)
+- 借助 AI 编写了 `fft_feature_extraction.py` 脚本。
+- 实现了：读取音频，计算时域 RMS（能量），通过 FFT 提取频域主频峰值（Hz），并具备绘制频谱图的功能。
