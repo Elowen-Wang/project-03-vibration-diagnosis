@@ -6,6 +6,9 @@
 > **仓库位置**：`C:\Users\wangy\Desktop\project-03-vibration-diagnosis`
 > **身份信息**：学号 2027094 · 王宇婷
 > **选题**：阶段一 课题 06 + 课题 08（20 分）｜阶段二 项目三（60 分）
+>
+> **2026-11-16 校准**：下面第 3 节是 11/13 制定的**原始八天计划**，保留不改作为过程记录。
+> 实际进展与剩余 4 天的重排见第 2.5 节《11/16 实况校准与剩余 4 天重排》，**以那一节为准**。
 
 ---
 
@@ -53,12 +56,20 @@
 | # | APP | 去哪下 | 干什么用 | 状态 |
 |---|---|---|---|---|
 | 1 | **分贝仪噪音检测（PLW110）** | 你已经在用 | 课题 06 补测，能导出带 GPS + 时间 + 最小/最大/平均分贝的报告 PNG | ✅ 已装，别换 |
-| 2 | **Phyphox** | 官网 https://phyphox.org → `Download` → Android APK；或 F-Droid 商店搜 `phyphox` | 课题 08 采三轴加速度 CSV；项目三补采加速度计信号 | ⬜ Day 1 装。**你在应用商店搜不到是正常的**，安卓国内商店基本没有，走官网 APK 直接装。装不上就用备用：`Physics Toolbox Sensor Suite`（应用商店/应用宝搜得到） |
+| 2 | **Phyphox** | iOS：App Store 搜 `phyphox`；安卓：官网 https://phyphox.org → `Download` → APK，或 F-Droid 商店 | 课题 08 采三轴加速度 CSV；项目三补采加速度计信号 | ✅ **已装好并实际使用**：11/16 用 `iPhone17,2 + phyphox 1.2.1` 采到 5 组步态 CSV。安卓国内商店搜不到是正常的，走官网 APK；备用 `Physics Toolbox Sensor Suite`（应用商店/应用宝搜得到） |
 | 3 | **手机原生录音机** | OPPO 自带 | 补录盲测音频 | ✅ 已装 |
 | 4 | 在线 MP3→WAV | https://qilingtools.com/zh/audio/convert | 以前用过的转换工具 | ✅ 已有；以后优先改用 Audacity 本地转 |
 
 > Phyphox 用法（Day 2 会用到）：打开 → 实验列表选 **`Accelerometer (without g)`** 或 `Accelerometer` → 点右上角 `▷` 开始记录 → 做动作 → 点 `⏸` 停止 → 右上角 `⋮` → `Export data` → 选 `CSV` → 存到手机，再传到电脑。
 > 同理项目三补振用 **`Accelerometer`**，把手机**平贴/固定在风扇底座**上再开录。
+>
+> ⚠️ **2026-11-16 实测经验**：选 `Acceleration (without g)` 导出的是 `Linear Acceleration x/y/z (m/s^2)`，
+> **手机已经把重力去掉了**，不要再减 9.81，也别把数值当 g。导出包里还有 `meta/device.csv`、`meta/time.csv`，
+> 一定要一起保存——面试查「当天现场」时，这两个文件比文件修改时间可靠得多。
+> 另外：**录的时候中途不要点暂停**。「快跑」那组就是 1.66 s 处暂停、隔了 25 s 才继续，结果只录到 3.88 s，白跑一趟。
+>
+> ⚠️ **设备要如实分列**：声学/照片用 OPPO Reno 15，加速度数据用 iPhone17,2 + Phyphox。
+> 报告里不能统一写成「全部由一台设备采集」。
 
 ---
 
@@ -82,10 +93,49 @@
 
 ### ❌ 还缺的（这就是 8 天要干的活）
 1. 课题 06 只覆盖 4 个点位时段组合，官网要 **5 点位 × 3 时段 = 15 组** → 缺 11 组，且缺雷达图、超标光效逻辑、数据表。
-2. **课题 08 一份数据都没有** → 要采 4 种姿态的三轴加速度，出 4 份 CSV + 波形图 + 阈值规则。
+2. ~~课题 08 一份数据都没有~~ → **11/16 已补**：5 组真实 CSV + 录屏 + meta 已采到，波形图与阈值规则已出；
+   但「快跑」组经核对判定无效待重采，且每类目前只有 1 次。详见第 2.5 节。
 3. `fft_feature_extraction.py` 跑的是**模拟的正弦波**，不是你的真实 WAV → 必须换成真分析，否则面试"项目真实性溯源"直接被问穿。
 4. 项目三缺：加速度计信号、盲测准确率、抗噪报告、5 工况可复现定义、跨日 `process_logs/`、`experiment_log.csv`。
 5. 4 个 README 里 `01_Stage1_Field_Measurement/README.md` 和 `AI_Chat_Log.md` 基本是空的，阶段二 README 里 D3 日志标题层级错乱、末尾有半截 `- `。
+
+---
+
+## 2.5 11/16 实况校准与剩余 4 天重排（**以本节为准**）
+
+### 实际已经完成的（有文件可查）
+
+| 原计划 | 实际情况 |
+|---|---|
+| Day 1–2 补测课题 06 共 15 组 | 只补到 **1 组**（11/13 中午实验室走廊右，55/66/59 dB）；标准 15 组仍是 0/15 |
+| Day 2 采课题 08 的 12 份 CSV | **11/16 采到 5 组**，但每组只有 1 次、且方向与命名和原计划不同；多采了「爬楼梯快」，「快跑」判定无效 |
+| Day 3 出课题 08 图表与阈值规则 | ✅ 已出（真实数据，37 窗口，留出集 50.0%），但只有 3 类有效 |
+| Day 4 项目三 WAV 特征提取 | ✅ 11/13 已由配套脚本跑通，本日未重跑；`protocol.md` 的具体参数空格**仍没填** |
+| — | ✅ 新增 `AI使用报告/` 三阶段截图 + `课题08核对报告.html`，主动查出快跑组无效 |
+
+**没变的硬缺口**：课题 06 标准 15 组、快跑重采、项目三加速度通道、11/18 当天 held-out 15 段、5 段盲测视频、逐日日志、AI 文字索引逐条原文。
+
+### 剩余 4 天重排（时间紧，先做「必须真人到场」的事）
+
+| 日期 | 必须到场采集（优先） | 电脑前工作 | 当天交付 |
+|---|---|---|---|
+| **11/17 Day 5** | ① **重采快跑**：Phyphox `Acceleration (without g)`，连续 ≥12 s，中途**不暂停**，每类补到 3 次；② 项目三加速度：手机贴风扇底座，5 工况 × 3 段，导出 CSV 到 `accel_raw/` | 跑 `python 01_Stage1_Field_Measurement\analyze_gait.py`（重采后应自动恢复 4 类）；跑 `--accel`；把 `protocol.md` 的档位/配重/遮挡面积空格填具体 | 完整 4 类阈值规则 + `accel_features.csv` + 当天日志 + 1 次 commit |
+| **11/18 Day 6** | ③ **当天新采 held-out 15 段**（OPPO 原生录音机，5 工况 × 3 段，存 `blind_test/`）+ 1 张带时间水印现场照；④ 录 5 段盲测视频（摆风扇 → 跑命令 → 念「真实 X，预测 Y」） | 跑 `--heldout`；重跑 `--noise` 写归因：哪两个工况最易混、为什么、工程上怎么补救 | `heldout_report.md`、5 段 MP4、抗噪结论、当天日志 |
+| **11/19 Day 7** | ⑤ 课题 06 补测：按 `noise_log.csv` 的 N01–N15 走 5 点位 × 3 时段（时间不够就先补早/晚各一轮，缺的如实写局限）+ 重测 R01 | 补 `AI_Chat_Log.md` 逐条原文并关联截图编号；全部 README 定稿；进度看板打勾 | 文字材料齐、AI 索引齐、当天日志 |
+| **11/20 Day 8** | — | `python 02_Stage2_Project_Vibration\analyze_real_wav.py --check`；对照评分表逐项打勾；12 分钟面试 6 题演练；检查 GitHub 网页；最终 push | 全部交付、收官日志 |
+
+### 三条必须守住的原则
+
+1. **优先级**：重采快跑 > 11/18 held-out > 课题 06 补测 > 文字润色。前两件必须当天、当场、换环境，事后补不了。
+2. **做不完就照实写**：官网「品性品行一票否决」，宁可少一组数据，也不编一个数字。缺口一律写进各 README 的「局限」并说明补救。
+3. **每天都在 GitHub 留痕**：`process_logs/2026-11-XX.md` 当天填、当天 commit，提交说明带日期和实际动作，别写 "update"。
+
+### 采集时的四个防坑提醒（都是这次踩过的）
+
+- Phyphox 开始后**不要点暂停**，跑完/走完再停止；否则 `time.csv` 里会留下 PAUSE 空档，数据长度对不上。
+- 每组同时保存 `meta/device.csv` 和 `meta/time.csv`，这是「同一台设备、同一时刻」的硬证据。
+- **别用文件修改时间当采集时刻**：MP4 的 `creation_time` 是导出时刻，mtime 是拷贝时刻。
+- 想让录屏和 CSV 能逐秒对齐，就在开始和结束各敲击/拍手一次，在 CSV 和音轨上留下共同尖峰。
 
 ---
 
@@ -228,7 +278,7 @@
 
 ---
 
-## 4. 三条命令速查（贴在所边上）
+## 4. 三条命令速查（贴在手边）
 
 在"命令提示符"里，先执行第一行（每次打开都要）：
 
@@ -242,6 +292,14 @@ python 02_Stage2_Project_Vibration\analyze_real_wav.py --all
 `--all` 会一次性跑完 extract / classify / blind / noise / heldout / check 并生成全部图表。
 单独跑某一步就换成 `--extract`、`--classify`、`--blind`、`--noise`、`--heldout`、`--accel`、`--check`。
 
+课题 08 的三个命令（**注意默认读真实数据**）：
+```bat
+python 01_Stage1_Field_Measurement\analyze_gait.py                    :: 正式：读 课题08/ 真实 CSV
+python 01_Stage1_Field_Measurement\analyze_gait.py --demo              :: 演示：合成数据只写 results/_demo/
+python 01_Stage1_Field_Measurement\analyze_gait.py --include-invalid   :: 临时把无效的快跑组纳入对比
+```
+`--demo` 的产物已隔离，**不会覆盖真实结论**，但也**绝不能写进报告**。终端若打印「依据核对报告排除无效组」是正常提示，不是报错。
+
 **常见报错对照**
 
 | 报错 | 原因 | 怎么办 |
@@ -250,6 +308,9 @@ python 02_Stage2_Project_Vibration\analyze_real_wav.py --all
 | `ModuleNotFoundError: No module named 'numpy'` | 在跑旧的演示脚本 | 改跑 `analyze_real_wav.py`，它零依赖 |
 | `FileNotFoundError: ...wav` | 没在仓库根目录执行 | 先敲上面第一行 `cd /d ...` |
 | 中文路径乱码 / 找不到文件 | 命令提示符编码 | 输 `chcp 65001` 回车再跑 |
+| 步态分析「读不到 CSV」或 0 个窗口 | 数据放进了 `课题08/<姿态>/` 而不是早期的 `gait_raw/` | 脚本已自动支持新目录；确认每个姿态目录下**有直属 CSV**，`meta/` 单独放子目录 |
+| 特征数值看起来特别小 / 阈值对不上 | 把 `Linear Acceleration (m/s^2)` 当成含重力的 g，又除了一次 9.81 | 用 `Acceleration (without g)` 导出的就已去重力，别再换算；脚本会自动判断 |
+| 终端打印「排除无效组：快跑」 | 核对报告判定该组没录到有效动作 | 正常提示。重采前是 3 类流程验证，不是最终 4 类结论 |
 | GitHub Desktop 推送失败 | 网络或登录态 | 点 `Repository → Push` 重试；仍失败用网页版直接上传文件 |
 
 ---

@@ -265,16 +265,33 @@ def step_check():
     print(f"  [{'OK' if n_noise >= 15 else 'MISSING'}] 课题06 标准15组已填数值 {n_noise}/15")
     if n_noise < 15:
         missing.append(f"noise_log.csv 缺 {15 - n_noise} 组")
-    gait = list((ROOT / "01_Stage1_Field_Measurement" / "gait_raw").glob("*.csv"))
-    print(f"  [{'OK' if len(gait) >= 4 else 'MISSING'}] 课题08 步态 CSV {len(gait)}/4+")
-    if len(gait) < 4:
-        missing.append("gait_raw 缺步态 CSV")
+    n_hist = (sum(1 for r in core.read_csv(noise)
+                  if str(r.get("record_id", "")).startswith("H") and r.get("avg_db"))
+              if noise.exists() else 0)
+    print(f"  [INFO] 课题06 历史/补测佐证 {n_hist} 组（不计入标准 15 组）")
+    stage1 = ROOT / "01_Stage1_Field_Measurement"
+    gait_flat = list((stage1 / "gait_raw").glob("*.csv"))
+    gait_dir = stage1 / "课题08"
+    gait_new = list(gait_dir.glob("*/*.csv")) if gait_dir.exists() else []
+    # 依据 AI使用报告/第一阶段/课题08核对报告.html：快跑组未录到有效动作，保留文件但不计入有效数据
+    invalid = [p for p in gait_new if "快跑" in str(p) or p.stem == "running"]
+    gait_valid = [p for p in gait_flat + gait_new if p not in invalid]
+    print(f"  [{'OK' if len(gait_valid) >= 4 else 'MISSING'}] 课题08 步态 CSV "
+          f"共 {len(gait_flat) + len(gait_new)} 份 / 有效 {len(gait_valid)} 份"
+          + (f"（{len(invalid)} 份判定无效，原文件保留）" if invalid else ""))
+    if len(gait_valid) < 4:
+        missing.append("课题08 有效步态 CSV 不足 4 份")
+    if invalid:
+        print("  [PENDING] 快跑组无效，Day 5 重采后 4 类才完整（见 课题08/README.md）")
     logs = list((ROOT / "process_logs").glob("2026-*.md"))
     print(f"  [{'OK' if len(logs) >= 8 else 'MISSING'}] 日志模板 {len(logs)}/8（文件存在 ≠ 当天已填写，请逐日确认）")
     if len(logs) < 8:
         missing.append("process_logs 缺日志")
     for rel in ["README.md", "01_Stage1_Field_Measurement/README.md",
-                "02_Stage2_Project_Vibration/README.md", "AI_Chat_Log.md", "DAILY_PLAN.md"]:
+                "02_Stage2_Project_Vibration/README.md", "AI_Chat_Log.md", "DAILY_PLAN.md",
+                "01_Stage1_Field_Measurement/课题06/README.md",
+                "01_Stage1_Field_Measurement/课题08/README.md",
+                "AI使用报告/README.md", "process_logs/README.md"]:
         ok = (ROOT / rel).exists()
         print(f"  [{'OK' if ok else 'MISSING'}] {rel}")
         if not ok:
