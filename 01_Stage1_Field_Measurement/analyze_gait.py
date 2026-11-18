@@ -277,6 +277,20 @@ def main():
                   core.bar_chart(cats, [round(v, 2) for v in dom],
                                  title="各姿态步态主频对比 Hz", ylabel="Hz", value_fmt="{:.2f}"))
 
+    # 四类姿态特征雷达图：各维按全体最大值归一化到 0–1，避免量纲差异压平图形
+    rkeys = ["svm_mean", "svm_std", "az_range", "dominant_hz"]
+    rnames = ["合加速度均值", "波动强度", "垂直幅度", "步态主频"]
+    rmax = {k: max([f[k] for f in feats] + [1e-6]) for k in rkeys}
+    rseries = []
+    for idx, s in enumerate(cats):
+        sub = [f for f in feats if f["state"] == s]
+        rseries.append({"name": s, "color": core.PALETTE[idx % len(core.PALETTE)],
+                        "values": [round(core.mean([f[k] for f in sub]) / rmax[k], 4)
+                                   for k in rkeys]})
+    core.save_svg(OUT / "08_radar.svg", 680, 360,
+                  core.radar_chart(rnames, rseries, vmax=1.0, width=680, height=360,
+                                   title="课题08 · 四类姿态特征雷达（各维按最大值归一化）"))
+
     # 留出验证：奇偶窗口分开，避免拿同一段数据自测
     train = [f for i, f in enumerate(feats) if i % 2 == 0]
     test = [f for i, f in enumerate(feats) if i % 2 == 1]
@@ -292,14 +306,23 @@ def main():
                if hz_on else "# 快跑分支暂禁用：该类有效样本待重采，不拿默认值硬判")
     hz_thr = f"{thr['dominant_hz']:.2f}" if hz_on else "禁用（样本缺失）"
 
+    if skipped:
+        scope_note = (f"- 已排除无效组：{', '.join(s for s, _ in skipped)} —— 依据 AI使用报告/第一阶段/课题08核对报告.html，"
+                      "有效动作未录到，待重采；重采前本表为 3 类流程验证，**不是最终 4 类结论**。")
+    elif a.include_invalid and not a.demo:
+        scope_note = ("- **4 类全部纳入（含核对报告判定无效的「快跑」组）**：该组仅 3.88 s 有效动作、"
+                      "1.66 s 处 PAUSE 后隔约 25 s 才继续，本次只切出 1 个窗口；快跑分支的阈值由这 1 个窗口标定，"
+                      "**置信度极低，仅用于让 4 类的 CSV / 波形图 / 规则形式齐全**，不能当作最终 4 类结论。"
+                      "原始文件未删未改，重采 ≥12 s 连续数据后覆盖 `课题08/快跑/running.csv` 再重跑即可。")
+    else:
+        scope_note = "- 参与类别：4 类齐全"
+
     md = [
         "# 课题 08 · 步态阈值规则与验证", "",
         "> 由 `analyze_gait.py` 生成。当前为" + ("**合成演示数据（不得写进结论）**" if a.demo else "**真实采集数据**") + "。", "",
         f"- 加速度单位：`{' / '.join(sorted(units))}`（Phyphox「Acceleration (without g)」导出的线性加速度）",
         f"- 数据源：`{NEW_RAW.name}/` 下各姿态目录" if not a.demo else "- 数据源：`results/_demo/`",
-        (f"- 已排除无效组：{', '.join(s for s, _ in skipped)} —— 依据 AI使用报告/第一阶段/课题08核对报告.html，"
-         "有效动作未录到，待重采；重采前本表为 3 类流程验证，**不是最终 4 类结论**。")
-        if skipped else "- 参与类别：4 类齐全",
+        scope_note,
         "",
         "## 特征定义", "",
         "| 特征 | 物理含义 |", "|---|---|",
@@ -343,17 +366,35 @@ def main():
         md += [f"| `{name}` | {n} |" for name, n in trimmed]
         md.append("")
     if not a.demo:
-        md += ["## 当前结果的诚实解读", "",
-               "- 本表的准确率是**流程验证值，不是最终结论**：4 类里「快跑」有效样本待重采，当前只剩 3 类。",
-               "- 官网对第一阶段要的是「原始 CSV + 波形图 + 可解释阈值规则 + 现场证据」，"
-               "并未要求高准确率；把分不开的原因讲清楚，比报一个挑出来的漂亮数字更重要。",
-               "- 平地慢走与上下楼梯的 `az_range`、`svm_std` 范围高度重叠，"
-               "说明手机佩戴方式与行走速度带来的幅度差异，已经盖过了动作类型本身的差异。",
-               "- 下一步：① 重采快跑（≥12 s 连续、中途不要暂停）；② 每类补到 3 次以估计类内波动；"
-               "③ 改用主频 / 频谱质心等相对特征为主判据；④ 全程固定同一手机位置并写进日志。", ""]
+        md += ["## 当前结果的诚实解读", ""]
+        if a.include_invalid:
+            md += [
+                "- 4 类的**原始 CSV、波形图、可解释阈值规则已齐**，满足官网形式要求；"
+                "但「快跑」组依据《课题08核对报告》判定为无效采集，本次只是如实纳入并显著标注，"
+                "**没有删除、没有修改、没有补造数据**。",
+                f"- 留出集 {acc * 100:.1f}% 偏低的主因有两条：① 快跑只有 1 个有效窗口，"
+                "阈值几乎无法可靠标定；② 平地慢走与上下楼梯的 `az_range` / `svm_std` 范围高度重叠，"
+                "手机佩戴方式与行走速度带来的幅度差异盖过了动作类型本身的差异。",
+                "- 官网对第一阶段要的是「原始 CSV + 波形图 + 可解释阈值规则 + 现场证据」，"
+                "并未要求高准确率；把分不开的原因讲清楚，比报一个挑出来的漂亮数字更重要。",
+                "- **若今晚还有 10 分钟**：用 Phyphox 重采快跑 ≥12 s 连续、中途不要点暂停，"
+                "覆盖 `课题08/快跑/running.csv`，再跑一次 "
+                "`python 01_Stage1_Field_Measurement\\analyze_gait.py --include-invalid`，"
+                "脚本会自动重标定阈值并重出全部图表，不需要改代码。",
+                "- 其余改进：每类补到 3 次以估计类内波动；改用主频 / 频谱质心等相对特征为主判据；"
+                "全程固定同一手机位置并写进日志。", ""]
+        else:
+            md += [
+                "- 本表的准确率是**流程验证值，不是最终结论**：4 类里「快跑」有效样本待重采，当前只剩 3 类。",
+                "- 官网对第一阶段要的是「原始 CSV + 波形图 + 可解释阈值规则 + 现场证据」，"
+                "并未要求高准确率；把分不开的原因讲清楚，比报一个挑出来的漂亮数字更重要。",
+                "- 平地慢走与上下楼梯的 `az_range`、`svm_std` 范围高度重叠，"
+                "说明手机佩戴方式与行走速度带来的幅度差异，已经盖过了动作类型本身的差异。",
+                "- 下一步：① 重采快跑（≥12 s 连续、中途不要暂停）；② 每类补到 3 次以估计类内波动；"
+                "③ 改用主频 / 频谱质心等相对特征为主判据；④ 全程固定同一手机位置并写进日志。", ""]
     (OUT / "08_threshold_rules.md").write_text("\n".join(md) + "\n", encoding="utf-8")
     print(f"留出集准确率 {acc * 100:.1f}%")
-    print("已输出 08_features.csv / 08_wave_*.svg / 08_feature_bars.svg / 08_confusion.svg / 08_threshold_rules.md")
+    print("已输出 08_features.csv / 08_wave_*.svg / 08_radar.svg / 08_feature_bars.svg / 08_confusion.svg / 08_threshold_rules.md")
     return 0
 
 
