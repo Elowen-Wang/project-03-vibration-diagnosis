@@ -292,16 +292,27 @@ def step_check():
     gait_flat = list((stage1 / "gait_raw").glob("*.csv"))
     gait_dir = stage1 / "课题08"
     gait_new = list(gait_dir.glob("*/*.csv")) if gait_dir.exists() else []
-    # 依据 AI使用报告/第一阶段/课题08核对报告.html：快跑组未录到有效动作，保留文件但不计入有效数据
-    invalid = [p for p in gait_new if "快跑" in str(p) or p.stem == "running"]
+    # 与 analyze_gait.py 同口径：按有效时长判无效，不再按文件名硬编码排除。
+    # 旧快跑仅 3.88 s 无效；11-19 重采为 31.98 s，已自动转为有效。
+    def _short(p):
+        try:
+            rr = core.read_csv(p)
+            if len(rr) < 10:
+                return True
+            tc = next((c for c in rr[0] if "time" in c.lower()), list(rr[0])[0])
+            ts = [core.fnum(r.get(tc)) for r in rr]
+            return (max(ts) - min(ts)) < 12.0
+        except Exception:
+            return True
+    invalid = [p for p in gait_flat + gait_new if _short(p)]
     gait_valid = [p for p in gait_flat + gait_new if p not in invalid]
     print(f"  [{'OK' if len(gait_valid) >= 4 else 'MISSING'}] 课题08 步态 CSV "
           f"共 {len(gait_flat) + len(gait_new)} 份 / 有效 {len(gait_valid)} 份"
-          + (f"（{len(invalid)} 份判定无效，原文件保留）" if invalid else ""))
+          + (f"（{len(invalid)} 份时长<12s 判定无效，原文件保留）" if invalid else ""))
     if len(gait_valid) < 4:
         missing.append("课题08 有效步态 CSV 不足 4 份")
     if invalid:
-        print("  [PENDING] 快跑组无效，Day 5 重采后 4 类才完整（见 课题08/README.md）")
+        print("  [PENDING] 存在时长<12s 的步态样本，待重采后在 analyze_gait.py 自动纳入")
     logs = list((ROOT / "process_logs").glob("2026-*.md"))
     print(f"  [{'OK' if len(logs) >= 8 else 'MISSING'}] 日志模板 {len(logs)}/8（文件存在 ≠ 当天已填写，请逐日确认）")
     if len(logs) < 8:

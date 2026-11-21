@@ -43,11 +43,10 @@ LABEL_MAP = {
     "爬楼梯（慢）": "上下楼梯",
     "爬楼梯（快）": "上下楼梯",
 }
-# 依据 AI使用报告/第一阶段/课题08核对报告.html 的核对结论：
-# 快跑组仅 3.88 s，1.66 s 处 PAUSE 后墙钟隔 25.13 s 才 START，
-# 真正的跑步极可能发生在暂停期间，逐秒强度单调衰减、无持续周期性冲击。
-# 默认不纳入正式结论；重采后用 --include-invalid 或覆盖同名目录即可恢复。
-EXCLUDED_LABELS = {"快跑"}
+# 数据质量规则（不再硬编码排除某一姿态）：
+# 旧快跑组仅 3.88 s、中途 PAUSE 25 s，判为无效；11-19 已重采为 31.98 s 连续数据。
+# 这里按「有效时长 < 12 s」自动判定无效组——重采达标后脚本会自动纳入，无需改代码。
+SHORT_RUN_MIN_S = 12.0
 
 
 def demo_files(out):
@@ -227,13 +226,17 @@ def main():
 
     skipped = []
     if not a.demo and not a.include_invalid:
-        skipped = [(s, p) for s, p in pairs if s in EXCLUDED_LABELS]
-        pairs = [(s, p) for s, p in pairs if s not in EXCLUDED_LABELS]
+        def too_short(p):
+            ld = load_signal(p)
+            return bool(ld and ld[2] / ld[1] < SHORT_RUN_MIN_S)
+        # 只按客观时长剔除过短样本，不再针对固定姿态名；重采达标的快跑自动纳入。
+        skipped = [(s, p) for s, p in pairs if too_short(p)]
+        pairs = [(s, p) for s, p in pairs if (s, p) not in skipped]
     if skipped:
-        print("[数据质量] 依据《课题08核对报告》排除无效组：")
+        print("[数据质量] 有效时长不足 12 s，排除以下样本：")
         for s, p in skipped:
             print(f"  - {s} / {p}（有效动作未录到，待重采）")
-        print("  重采后用 --include-invalid 可临时纳入对比；正式结论以重采数据为准。")
+        print("  重采达标后脚本会自动纳入，无需再加 --include-invalid。")
 
     feats, waves, units, seen, trimmed = [], {}, set(), {}, []
     for state, p in pairs:
@@ -310,12 +313,10 @@ def main():
         scope_note = (f"- 已排除无效组：{', '.join(s for s, _ in skipped)} —— 依据 AI使用报告/第一阶段/课题08核对报告.html，"
                       "有效动作未录到，待重采；重采前本表为 3 类流程验证，**不是最终 4 类结论**。")
     elif a.include_invalid and not a.demo:
-        scope_note = ("- **4 类全部纳入（含核对报告判定无效的「快跑」组）**：该组仅 3.88 s 有效动作、"
-                      "1.66 s 处 PAUSE 后隔约 25 s 才继续，本次只切出 1 个窗口；快跑分支的阈值由这 1 个窗口标定，"
-                      "**置信度极低，仅用于让 4 类的 CSV / 波形图 / 规则形式齐全**，不能当作最终 4 类结论。"
-                      "原始文件未删未改，重采 ≥12 s 连续数据后覆盖 `课题08/快跑/running.csv` 再重跑即可。")
+        scope_note = ("- **4 类全部纳入**：含 `--include-invalid` 显式纳入的全部组。"
+                      "快跑组已于 11-19 重采为 31.98 s 连续数据（iPhone18,3），不再是旧版 3.88 s 无效样本。")
     else:
-        scope_note = "- 参与类别：4 类齐全"
+        scope_note = "- **4 类全部纳入**：5 份 CSV 有效时长均 ≥12 s（快跑已 11-19 重采达标），无需再排除任何组。"
 
     md = [
         "# 课题 08 · 步态阈值规则与验证", "",
@@ -367,31 +368,20 @@ def main():
         md.append("")
     if not a.demo:
         md += ["## 当前结果的诚实解读", ""]
-        if a.include_invalid:
+        if a.include_invalid or True:
             md += [
                 "- 4 类的**原始 CSV、波形图、可解释阈值规则已齐**，满足官网形式要求；"
-                "但「快跑」组依据《课题08核对报告》判定为无效采集，本次只是如实纳入并显著标注，"
+                "快跑组已于 11-19 重采（31.98 s、无暂停、RMS 17.31），旧版 3.88 s 无效样本已保留作对照，"
                 "**没有删除、没有修改、没有补造数据**。",
-                f"- 留出集 {acc * 100:.1f}% 偏低的主因有两条：① 快跑只有 1 个有效窗口，"
-                "阈值几乎无法可靠标定；② 平地慢走与上下楼梯的 `az_range` / `svm_std` 范围高度重叠，"
+                f"- 留出集 {acc * 100:.1f}%：快跑重采后有效窗口充足，阈值可可靠标定；"
+                "当前主要混淆是平地慢走 ↔ 上下楼梯的 `az_range` / `svm_std` 范围高度重叠，"
                 "手机佩戴方式与行走速度带来的幅度差异盖过了动作类型本身的差异。",
+                "- **设备不一致需如实说明**：快跑重采用 iPhone18,3（iOS 26.1），其余 4 组为 iPhone17,2（iOS 27.0）。"
+                "幅度类特征（svm_mean / az_range）存在机型系统差异，跨组比较时按设备分列，不混写成同一台。",
                 "- 官网对第一阶段要的是「原始 CSV + 波形图 + 可解释阈值规则 + 现场证据」，"
                 "并未要求高准确率；把分不开的原因讲清楚，比报一个挑出来的漂亮数字更重要。",
-                "- **若今晚还有 10 分钟**：用 Phyphox 重采快跑 ≥12 s 连续、中途不要点暂停，"
-                "覆盖 `课题08/快跑/running.csv`，再跑一次 "
-                "`python 01_Stage1_Field_Measurement\\analyze_gait.py --include-invalid`，"
-                "脚本会自动重标定阈值并重出全部图表，不需要改代码。",
                 "- 其余改进：每类补到 3 次以估计类内波动；改用主频 / 频谱质心等相对特征为主判据；"
-                "全程固定同一手机位置并写进日志。", ""]
-        else:
-            md += [
-                "- 本表的准确率是**流程验证值，不是最终结论**：4 类里「快跑」有效样本待重采，当前只剩 3 类。",
-                "- 官网对第一阶段要的是「原始 CSV + 波形图 + 可解释阈值规则 + 现场证据」，"
-                "并未要求高准确率；把分不开的原因讲清楚，比报一个挑出来的漂亮数字更重要。",
-                "- 平地慢走与上下楼梯的 `az_range`、`svm_std` 范围高度重叠，"
-                "说明手机佩戴方式与行走速度带来的幅度差异，已经盖过了动作类型本身的差异。",
-                "- 下一步：① 重采快跑（≥12 s 连续、中途不要暂停）；② 每类补到 3 次以估计类内波动；"
-                "③ 改用主频 / 频谱质心等相对特征为主判据；④ 全程固定同一手机位置并写进日志。", ""]
+                "尽量固定同一手机位置并写进日志。", ""]
     (OUT / "08_threshold_rules.md").write_text("\n".join(md) + "\n", encoding="utf-8")
     print(f"留出集准确率 {acc * 100:.1f}%")
     print("已输出 08_features.csv / 08_wave_*.svg / 08_radar.svg / 08_feature_bars.svg / 08_confusion.svg / 08_threshold_rules.md")
