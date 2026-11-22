@@ -26,8 +26,9 @@
    - [盲测演示页](./02_Stage2_Project_Vibration/blind_test/盲测演示.html) · [录屏指引](./02_Stage2_Project_Vibration/blind_test/README.md) · [15 段逐条明细](./02_Stage2_Project_Vibration/blind_test/blind_detail.csv)
 3. [AI 使用报告 · 截图与核对证据](./AI使用报告/README.md) — 内含 [课题08核对报告 HTML](./AI使用报告/第一阶段/课题08核对报告.html)
 4. [AI 提问与排障文字索引](./AI_Chat_Log.md)
-5. [每日过程日志 process_logs](./process_logs/README.md) — 12 份
+5. [每日过程日志 process_logs](./process_logs/README.md) — 14 份
 6. [11/13 → 11/20 每日任务表](./DAILY_PLAN.md) — 含软件/APP 下载清单与实况校准
+7. **[提交操作指引](./提交指引.md) — 11/24 23:59 截止｜五步怎么点、作品自述成稿、大文件怎么传**
 
 ## 三、分析主线
 
@@ -103,14 +104,22 @@
 - ✅ 复核全部数据：快跑重采有效、11-20 十份报告已登记入表、两处脚本按文件名的硬编码判定改为按时长客观判定、项目三主频说明由「3 段跳变」更正为约 40 段基频/谐波双峰。
 - ✅ README 与 AI 报告定稿：清理重录待办口吻，统一为如实说明当前状态；held-out 0/15、加速度通道未采、标准格 3/15 等未做项照实列为局限，不编数据。
 
-## 五、目录结构（11/21 实际）
+### 11/22（Day 10）
+- ✅ **课题 08 判据升级**：把「用垂直幅度分楼梯」换成「用 1×/2× 步频能量比分节奏」（平地双脚交替 vs 爬楼单脚支撑的受力周期差异）。K 折 **48.0% → 88.3%**，严格留一整份源文件 **63.3%**，阈值全部由训练窗口自动标定。
+- ✅ **课题 06 图表补齐**：雷达图改为完整 **5 点位 × 3 时段矩阵**视图，新增矩阵热力图 `06_noise_matrix.svg`（缺失格标「未采集」、超标格红框）与光效状态时间线 `06_alert_timeline.svg`。
+- ✅ **课题 06 标准格重新归位 3/15 → 12/15**：新增 `tools/build_standard_grid.py`，按事先声明的四条规则（时段窗口 / 点位对应 / 同格择优 / 数值不加工）把 20 次实测中已合规的 9 组归位。**剩余 3 格（晚图书馆/晚主干道/晚运动场）是真实缺口，不补造。**
+- ✅ **门牌证据定案**：现场照片门牌清晰可读「426 产业项目实训室」「425 智能制造实训室」，与官网 426 实践工坊同址，据此确认「实验室走廊 = 官网实训室走廊」。
+- ✅ **项目三特征消融**：逐个屏蔽 11 维特征并重新标定阈值重测，`crest` 最关键（约 +4.0 pp），`dominant_hz` 在本批数据中冗余（约 −2.7 pp，跨设备稳健性另论）。
+- 📌 局限不变并如实写明：跨日 held-out 0/15、加速度通道未采、课题 06 标准格缺 3 格、课题 08 每类仅一次采集。
+
+## 五、目录结构（11/22 实际）
 
 ```
 project-03-vibration-diagnosis/
 ├── README.md · DAILY_PLAN.md · AI_Chat_Log.md
 ├── AI使用报告/                   README + 三阶段截图 + 课题08核对报告.html
-├── process_logs/                 12 份日志 + README
-├── tools/                        signal_core.py（零依赖内核）· make_templates.py · make_blind_demo.py
+├── process_logs/                 14 份日志 + README
+├── tools/                        signal_core.py（零依赖内核）· build_standard_grid.py（标准格归位）· make_templates.py · make_blind_demo.py
 ├── 01_Stage1_Field_Measurement/
 │   ├── README.md · noise_log.csv
 │   ├── analyze_noise.py · analyze_gait.py
@@ -133,6 +142,7 @@ project-03-vibration-diagnosis/
 ```bat
 cd /d C:\Users\wangy\Desktop\project-03-vibration-diagnosis
 python tools\signal_core.py
+python tools\build_standard_grid.py
 python 01_Stage1_Field_Measurement\analyze_noise.py
 python 01_Stage1_Field_Measurement\analyze_gait.py
 python 02_Stage2_Project_Vibration\analyze_real_wav.py --all
@@ -152,10 +162,10 @@ python 02_Stage2_Project_Vibration\analyze_real_wav.py --check
 | ① 5 工况 × 15 组原始 WAV/CSV 及实验照（20 分） | `*-15/` 75 段 WAV、`experiment_log.csv`、`day*.jpg`、`*.png`、`*.mp4`、`实验照索引.md` | ✅ 数据齐；3 工况有专属照，摩擦/失衡只有设备本体照（已标注） |
 | ② 时域/频域特征提取代码（20 分） | `analyze_real_wav.py`、`tools/signal_core.py`、`results/features.csv`、`spectrum_compare.svg` | ✅ 已跑通 75 段 |
 | ③ 盲测准确率视频与抗噪报告（20 分） | `results/loo_report.md`、`blind_report.md`、`noise_robustness.md`、`feature_ablation.md`、`blind_test/` | ✅ 视频已录、抗噪结论已填、**11-22 新增特征消融分析**；held-out 未采已写局限 |
-| 跨多日连续过程数据 | `process_logs/` 12 份、Git 提交历史、`AI使用报告/` | ✅ 模板与历史补记已建，逐日记录见第四节 |
+| 跨多日连续过程数据 | `process_logs/` 14 份、Git 提交历史、`AI使用报告/` | ✅ 模板与历史补记已建，逐日记录见第四节 |
 | `03-AI-Collaboration` | `AI使用报告/` 截图 + 1 份 HTML 核对报告 + `AI_Chat_Log.md` | ✅ 截图与文字索引已整理 |
 
-**第一阶段 20 分**：`noise_log.csv`（标准格 3/15 + 17 组佐证）、`results/06_*`、`课题08/` 5 组 CSV、`results/08_*`、`AI使用报告/第一阶段/课题08核对报告.html`；逐条见 [课题08交付清单](./01_Stage1_Field_Measurement/课题08/交付清单.md)。标准 15 格未铺满、held-out 与加速度未采，均作为已知局限如实说明。
+**第一阶段 20 分**：`noise_log.csv`（标准格 **12/15** + 8 组佐证）、`results/06_*`、`课题08/` 5 组 CSV、`results/08_*`、`AI使用报告/第一阶段/课题08核对报告.html`；逐条见 [课题08交付清单](./01_Stage1_Field_Measurement/课题08/交付清单.md)。标准格缺 3 格（晚图书馆/晚主干道/晚运动场）、held-out 与加速度未采，均作为已知局限如实说明。
 
 ## 八、关键结果（真实数据，非模拟）
 
@@ -167,7 +177,7 @@ python 02_Stage2_Project_Vibration\analyze_real_wav.py --check
 | 抗噪 SNR 30 → 0 dB | **88.0% → 48.0%**，拐点 5 dB | `results/noise_robustness.md` |
 | 各工况主频 | 低速 97–100、高速 154、摩擦 120、遮挡 147、失衡 151 Hz（约 40 段抓到谐波高频峰，见项目三 README） | `results/features.csv` |
 | 声级交叉佐证 | 低速 52 → 高速 57 → 受阻 61 dB（平均分贝，11/01） | 3 份分贝报告 |
-| 课题 06 分贝报告 | 20 组 + 项目起点 3 份；标准格 3/15，其余为佐证；报告时间与现场水印逐张吻合 | `课题06/` |
+| 课题 06 分贝报告 | 20 组 + 项目起点 3 份；标准格 **12/15**，其余 8 组为佐证；报告时间与现场水印逐张吻合 | `课题06/` |
 | 课题 08 采集 | 5 组 · 100 Hz · Linear Acceleration (m/s²) · iPhone17,2 + phyphox 1.2.1（快跑重采为 iPhone18,3） | `课题08/*/meta/` |
 | 课题 08 四类姿态 | **K 折 88.3%** / **留一整份源文件 63.3%** | `results/08_threshold_rules.md` |
 
@@ -184,5 +194,6 @@ python 02_Stage2_Project_Vibration\analyze_real_wav.py --check
 - 11-05 的 7 dB、11-20 的 18 dB 均判定为 App 启动爬升假值，保留原始记录 + 标注归因，平均值可用、最小值不纳入统计，未重测；11-13 的 59 dB 与 11/04 同点位 38 dB 差约 20 dB，无对照实验，不写成昼夜规律。
 - 分贝报告的时间一律以 App「检测时间」为准，并逐张与现场水印时刻核对；App 自动生成的场景描述（如食堂写「汽车穿梭在马路上」）是按分贝套的模板文案，**不作点位依据**，点位以现场水印照为准；所有报告时间与水印一一吻合，未发现文件名与内容对调。
 - 事后补记的历史日志均在文首注明；`process_logs/` 里仍为空的日志不代填、不编造。
-- **未做项如实列局限**：跨日 held-out 0/15、加速度通道未采、课题 06 标准 15 格仅 3/15，均说明对结论的影响，不编数据。
+- **未做项如实列局限**：跨日 held-out 0/15、加速度通道未采、课题 06 标准格 12/15（缺晚图书馆/晚主干道/晚运动场 3 格），均说明对结论的影响，不编数据。
+- **标准格归位规则事先声明且不挑数**：`tools/build_standard_grid.py` 的四条规则（时段窗口、点位对应、同格择优、数值不加工）在归位前写定，同格多候选取「min ≥ 15 dB 排除 App 启动假值 → 检测时间最早」，**与声级高低无关**；归位只搬移已有实测，不做任何平均或修正。
 - 允许并鼓励使用 AI 辅助编码与排障，记录见 `AI使用报告/` 与 `AI_Chat_Log.md`；所有实测数据、结论与代码均经本人核对。

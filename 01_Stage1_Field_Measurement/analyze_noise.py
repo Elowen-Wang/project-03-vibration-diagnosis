@@ -63,11 +63,20 @@ def main():
         print(f"找不到 {CSV}")
         return 1
     rows = core.read_csv(CSV)
-    filled = [r for r in rows if r.get("avg_db") and r.get("min_db") and r.get("max_db")]
-    standard = [r for r in filled if str(r.get("record_id", "")).startswith("N")]
-    print(f"已录入数值：{len(filled)} 组（其中标准 15 组表已完成 {len(standard)}/15）")
+    has_val = lambda r: r.get("avg_db") and r.get("min_db") and r.get("max_db")
+    # N01–N15 是官网要求的标准 15 格；H01–H16 是历史/补测记录。
+    # 被归入标准格的 H 记录（grid_slot 非空）其数值已复制到对应 N 行，
+    # 若两边都算一次会重复计数，所以证据组只取**未归位**的 H 记录。
+    standard = [r for r in rows if str(r.get("record_id", "")).startswith("N") and has_val(r)]
+    evidence = [r for r in rows if str(r.get("record_id", "")).startswith("H")
+                and has_val(r) and not r.get("grid_slot")]
+    filled = standard + evidence          # 每行 = 一次独立实测，不重复
+    print(f"独立实测 {len(filled)} 组（标准 15 格已填 {len(standard)} 格 + 佐证 {len(evidence)} 组）")
     if len(standard) < 15:
-        print(f"  还缺 {15 - len(standard)} 组，按 DAILY_PLAN.md 的 Day1/Day2 补测后重跑本脚本")
+        missing = [r["record_id"] for r in rows
+                   if str(r.get("record_id", "")).startswith("N") and not has_val(r)]
+        print(f"  标准表还缺 {15 - len(standard)} 格：{' '.join(missing) if missing else '—'}"
+              f"（真实缺口，不补造；补测后重跑本脚本）")
     if not filled:
         print("暂无数值，先补测。")
         return 0

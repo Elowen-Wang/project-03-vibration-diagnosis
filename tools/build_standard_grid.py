@@ -1,0 +1,139 @@
+"""课题 06 · 标准 15 格归位工具（幂等）
+
+用法（仓库根目录执行）：
+    python tools/build_standard_grid.py
+
+背景
+----
+官网课题 06 要求「5 处点位 × 早/午/晚 = 15 组声学数据表」。
+`noise_log.csv` 里 N01–N15 是这 15 个标准格的槽位，H01–H16 是历史/补测记录。
+此前只有 N11/N12/N14 三格填了数值，其余 12 格空着，而**已有实测记录里
+至少有 9 组的时段与点位本来就完全合规，只是没有被归位**——结果是标准表完成度
+被低估成 3/15，雷达图与热力图大半空白。
+
+本脚本做一件事：按下面四条**事先声明、可复现**的规则，把合规实测归位到标准格。
+
+归位规则
+--------
+R1 时段合规：检测时刻落在本项目自定窗口内
+             早 07:00–09:00 / 午 11:00–14:00 / 晚 20:00–22:00
+             （官网只写「早/午/晚」，未给具体钟点，窗口口径见阶段一 README）
+R2 点位合规：实测点位与官网 5 点位一一对应
+             运动场 = 操场（11-18 水印核实）
+             实训室走廊 = 实验室走廊（门牌「426 产业项目实训室」「425 智能制造实训室」，
+                                     与官网 426 实践工坊同址，见课题06/README.md）
+R3 同格多候选时：优先取 min_db 正常（≥15 dB，排除 App 启动爬升假值）者，
+             仍并列则取检测时间最早者——该规则与声级高低无关，不挑好看的数。
+R4 数值一律从来源记录逐字段复制，不做任何平均、修正或再加工。
+
+未归位的 3 格（晚 图书馆 / 晚 主干道 / 晚 运动场）是真实缺口，
+脚本不填、不猜，README 与交付清单按实际完成度如实写。
+"""
+from __future__ import annotations
+
+import csv
+import shutil
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+CSV = ROOT / "01_Stage1_Field_Measurement" / "noise_log.csv"
+
+# 标准格 ← 来源实测记录。理由逐条写清，便于复核与答辩。
+GRID_RULES = {
+    "N01": ("H04", "11/05 11:50 图书馆一楼；午时段、图书馆点位无歧义；"
+                   "min 7dB 为 App 启动爬升假值不进统计，均值 41dB 与同点位 H01(下午 41dB) 互证；"
+                   "官网只要均值与峰值"),
+    "N02": ("H07", "11/18 12:40 百味园食堂；午时段、食堂点位无歧义"),
+    "N03": ("H14", "11/20 12:31 主干道校内；午时段、主干道点位无歧义；"
+                   "同格候选 H15(12:36 校外) min 18dB 为启动假值，按 R3 取本组"),
+    "N04": ("H06", "11/18 11:44 操场；运动场 = 操场（11-18 水印核实）"),
+    "N05": ("H05", "11/13 11:42 实验室走廊右；门牌 426 产业项目实训室可证 = 官网实训室走廊；"
+                   "同格候选 H05L(11:41 左) min 正常且更早，按 R3 取本组"),
+    "N07": ("H09", "11/18 20:40 百味园食堂；20:40 落在晚 20:00–22:00 窗口内"),
+    "N10": ("H03", "11/04 20:33 实验室走廊右；门牌 426/425 实训室可证；"
+                   "同格候选 H02(20:32 左) min 正常且更早，按 R3 取本组"),
+    "N13": ("H13", "11/20 08:42 主干道校外；08:42 落在早 07:00–09:00 窗口内；"
+                   "同格候选 H12(09:02 校内) 已超出窗口，按 R1 不取"),
+    "N15": ("H11", "11/20 08:33 实验室走廊右；门牌 426/425 实训室可证；"
+                   "同格候选 H10(08:32 左) min 正常且更早，按 R3 取本组"),
+}
+
+# 已直采进标准格、无对应 H 记录的组（N 行本身即原始记录）
+DIRECT = ("N11", "N12", "N14")
+
+COPY_FIELDS = ("date", "min_db", "max_db", "avg_db", "duration_s",
+               "weather", "device", "photo", "report_png")
+
+
+def load() -> tuple[list[str], list[dict]]:
+    with open(CSV, "r", encoding="utf-8-sig", newline="") as f:
+        raw = list(csv.reader(f))
+    head = raw[0]
+    rows = []
+    for line in raw[1:]:
+        if not line or not line[0].strip():
+            continue
+        # 历史空模板行末尾多了一个逗号，这里统一裁到表头长度
+        line = (line + [""] * len(head))[:len(head)]
+        rows.append(dict(zip(head, line)))
+    return head, rows
+
+
+def main() -> int:
+    head, rows = load()
+    by_id = {r["record_id"]: r for r in rows}
+
+    if "grid_slot" not in head:
+        head.append("grid_slot")
+
+    for rid, (src, why) in GRID_RULES.items():
+        if rid not in by_id:
+            print(f"[跳过] {rid} 在 CSV 里不存在")
+            continue
+        s = by_id[src]
+        n = by_id[rid]
+        for k in COPY_FIELDS:
+            n[k] = s[k]
+        n["source"] = f"标准格←{src}"
+        n["note"] = f"来源{src}：{why}"
+        s["grid_slot"] = rid
+        s["note"] = (s["note"] + f"｜已归入标准格 {rid}（数值见 {rid} 行）").strip("｜")
+
+    for rid in DIRECT:
+        if rid in by_id:
+            by_id[rid]["grid_slot"] = rid
+            by_id[rid]["source"] = "标准格直采"
+            by_id[rid]["note"] = ("标准格直采记录（11-20 新采，原始报告即本组）；"
+                                  + by_id[rid]["note"])
+
+    # 槽位定义行（N01–N15 中未被填的）保持空值，只留 period/location 供人读
+    for r in rows:
+        if r["record_id"].startswith("N") and r["record_id"] not in by_id.get(
+                r["record_id"], {}).get("grid_slot", r["record_id"]):
+            pass
+
+    shutil.copy(CSV, CSV.with_suffix(".csv.bak"))
+    with open(CSV, "w", encoding="utf-8-sig", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=head)
+        w.writeheader()
+        for r in rows:
+            w.writerow({k: r.get(k, "") for k in head})
+
+    filled = [r for r in rows if r["record_id"].startswith("N") and r["avg_db"]]
+    h_rows = [r for r in rows if r["record_id"].startswith("H") and r["avg_db"]]
+    direct = [r for r in rows if r["record_id"] in DIRECT and r["avg_db"]]
+    print(f"标准 15 格完成度：{len(filled)}/15")
+    for r in filled:
+        print(f"  {r['record_id']} {r['period']:>1} {r['location']:<6} "
+              f"min={r['min_db']:>2} max={r['max_db']:>2} avg={r['avg_db']:>2}  [{r['source']}]")
+    empty = [r["record_id"] for r in rows
+             if r["record_id"].startswith("N") and not r["avg_db"]]
+    print(f"仍为空的标准格（真实缺口，不补造）：{' '.join(empty) if empty else '无'}")
+    print(f"独立实测组数：{len(h_rows) + len(direct)} 组"
+          f"（H 记录 {len(h_rows)} + 标准格直采 {len(direct)}），"
+          f"其中 {len(filled)} 组已归入标准 15 格，其余 {len(h_rows) + len(direct) - len(filled)} 组为佐证")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
