@@ -88,14 +88,31 @@ H15 中午主干道校外最小 18 dB、H16 晚主干道 17:58 是两处已知�
 
 ### 分析结果（脚本自动生成，见 `results/`）
 
+**噪声地图雷达图**（五条轴 = 5 个点位，三条折线 = 早/午/晚；虚线 = 该时段阈值，越线即超标）：
+
+![校园五点位 × 三时段噪声地图](./results/06_noise_radar.svg)
+
+**点位 × 时段矩阵热力图**（红框 = 超标，虚线格 = 未采集）：
+
+![标准 15 组声学数据表](./results/06_noise_matrix.svg)
+
+**超标提醒光效状态机**（四态框 + 升级/降级箭头 + 条件标签）：
+
+![声学超标自动提醒光效逻辑 · 状态机](./results/06_alert_fsm.svg)
+
+**状态机仿真状态时间线**：
+
+![状态机仿真状态时间线](./results/06_alert_timeline.svg)
+
 | 文件 | 内容 |
 |---|---|
 | `06_summary.csv` | 汇总表：阈值、超标分贝数、是否超标、是否异常（**23 行 = 23 次独立实测，不重复计数**） |
 | `06_noise_bars.svg` | 各记录平均声级柱状图 |
 | `06_noise_radar.svg` | 点位 × 时段雷达图（**完整 5×3 矩阵，15 格全有实测值**，三条折线均闭合） |
 | `06_noise_matrix.svg` | 点位 × 时段矩阵热力图（缺失格标「未采集」，超标格红框） |
+| `06_alert_fsm.svg` | **光效状态机转移图**（四态框 + 升级/降级箭头 + 条件标签） |
 | `06_alert_timeline.svg` | 光效状态机仿真状态时间线 |
-| `06_alert_logic.md` | **声学超标自动提醒光效逻辑**（可运行状态机 + 仿真结果） |
+| `06_alert_logic.md` | **声学超标自动提醒光效逻辑**（可运行状态机 + 参数取值理由 + 仿真结果） |
 
 ```bat
 python tools\build_standard_grid.py                             :: 归位标准 15 格（幂等）
@@ -106,7 +123,7 @@ python 01_Stage1_Field_Measurement\analyze_noise.py             :: 出图 + 光�
 阈值按教学区管理值设定：早/午 55 dB、晚 50 dB（参考 GB 3096 1 类区昼间 55 dB，晚间校园自习时段自定收紧）。
 状态机四态 `QUIET 绿常亮 → NORMAL 蓝常亮 → WARN 黄慢闪 1 Hz → ALERT 红快闪 2 Hz + 蜂鸣`，
 采用 **升级连续 3 帧确认 / 降级连续 5 帧确认 / 3 dB 滞回带** 防止临界抖动，瞬时峰值超阈值 +10 dB 触发单次短闪但不改变主状态。
-完整伪代码、仿真帧数与状态切换次数见 `results/06_alert_logic.md`，实现见 `analyze_noise.py` 的 `LightAlertFSM`。
+完整伪代码、参数取值理由、仿真帧数与状态切换次数见 `results/06_alert_logic.md`，实现见 `analyze_noise.py` 的 `LightAlertFSM`。
 
 ### 已知局限
 - 手机 App 非专业声级计，未做 A 计权校准，读数存在系统误差；结论只用于**同一设备下的相对比较**，不作绝对声环境合规判定。
@@ -225,7 +242,7 @@ python 01_Stage1_Field_Measurement\analyze_gait.py --demo     :: 演示：合成
 |---|---|---|
 | 课题 06：15 组声学数据表 | `noise_log.csv` | ✅ 标准格 **15/15 全满**（早 5/5、午 5/5、晚 5/5） |
 | 课题 06：雷达图 | `results/06_noise_radar.svg` + `06_noise_matrix.svg` | ✅ 完整 5×3 矩阵视图，缺失格明确标注 |
-| 课题 06：超标光效逻辑 | `results/06_alert_logic.md` + `LightAlertFSM` | ✅ |
+| 课题 06：超标光效逻辑 | `results/06_alert_logic.md` + `results/06_alert_fsm.svg` + `LightAlertFSM` | ✅ 四态状态机转移图 + 可运行代码 |
 | 课题 06：现场照片 | `课题06/*.jpg` / `*.mp4` | ✅ 已有组对应齐全 |
 | 课题 08：4 份原始 CSV 波形 | `课题08/*/` 5 组 CSV + `results/08_wave_*.svg` | ✅ 4 类齐全，快跑 11/19 重采有效 |
 | 课题 08：可视化图 | `results/08_wave_*.svg`（5 张）、`08_radar.svg`、`08_feature_bars.svg`、`08_confusion.svg` | ✅ |

@@ -168,6 +168,20 @@ python 02_Stage2_Project_Vibration\analyze_real_wav.py --check
 
 **第一阶段 20 分**：`noise_log.csv`（标准格 **15/15 全满** + 8 组佐证）、`results/06_*`、`课题08/` 5 组 CSV、`results/08_*`、`AI使用报告/第一阶段/课题08核对报告.html`；逐条见 [课题08交付清单](./01_Stage1_Field_Measurement/课题08/交付清单.md)。仅 held-out 0/15 与加速度通道未采作为已知局限如实说明。
 
+## 七之二、关键图表速览
+
+**课题 06 · 校园昼夜声学噪声地图**（五条轴 = 5 个点位，三条折线 = 早/午/晚；虚线 = 该时段阈值，越线即超标）：
+
+![校园五点位 × 三时段噪声地图](./01_Stage1_Field_Measurement/results/06_noise_radar.svg)
+
+**课题 06 · 声学超标自动提醒光效逻辑**（四态状态机，实现在 `analyze_noise.py` 的 `LightAlertFSM`）：
+
+![声学超标自动提醒光效逻辑 · 状态机](./01_Stage1_Field_Measurement/results/06_alert_fsm.svg)
+
+**课题 08 · 四类步态动作波形对比**：
+
+![四类步态波形](./01_Stage1_Field_Measurement/results/08_wave_平地慢走.svg)
+
 ## 八、关键结果（真实数据，非模拟）
 
 | 指标 | 数值 | 来源 |

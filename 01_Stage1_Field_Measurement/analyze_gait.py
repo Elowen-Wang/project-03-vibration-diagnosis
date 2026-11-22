@@ -392,9 +392,10 @@ def main():
         rseries.append({"name": s, "color": core.PALETTE[idx % len(core.PALETTE)],
                         "values": [round(core.mean([f[k] for f in sub]) / rmax[k], 4)
                                    for k in rkeys]})
-    core.save_svg(OUT / "08_radar.svg", 680, 360,
-                  core.radar_chart(rnames, rseries, vmax=1.0, width=680, height=360,
-                                   title="课题08 · 四类姿态特征雷达（各维按最大值归一化）"))
+    core.save_svg(OUT / "08_radar.svg", 680, 400,
+                  core.radar_chart(rnames, rseries, vmax=1.0, width=680, height=400,
+                                   title="课题08 · 四类姿态特征雷达（各维按最大值归一化）",
+                                   scale_bar=False, value_fmt="{:.0%}"))
 
     # 留出验证：重复分层 K 折交叉验证。
     # 早期版本只做一次「奇数窗训练 / 偶数窗测试」，样本少、且单次划分容易被

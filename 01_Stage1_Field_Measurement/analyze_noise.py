@@ -113,8 +113,15 @@ def main():
     title = ("校园五点位 × 三时段噪声地图（dB，标准 15 组已完成 "
              f"{len(standard)}/15，未采集格按 0 占位）" if len(standard) < 15
              else "校园五点位 × 三时段噪声地图（标准 15 组全采集，dB）")
-    core.save_svg(RESULTS / "06_noise_radar.svg", 680, 340,
-                  core.radar_chart(SPOTS, series, title=title, vmax=85))
+    # 径向标尺从 30 dB 起（环境背景噪声下限），让 38–62 dB 的实际差异拉开
+    # limits 传入各时段阈值 → 画成虚线参考多边形，越线即超标
+    core.save_svg(RESULTS / "06_noise_radar.svg", 760, 430,
+                  core.radar_chart(SPOTS, series, title=title, width=760, height=430,
+                                   vmin=30, vmax=70,
+                                   limits=[LIMITS.get(p, 55.0) for p in PERIODS],
+                                   limit_labels=[f"{p} 阈值 {LIMITS.get(p, 55.0):.0f} dB"
+                                                 for p in PERIODS],
+                                   footnote="虚线＝该时段阈值，越线即超标"))
 
     # 配套矩阵热力图：缺失格明确标注「未采集」，超标格红框，一眼看清完成度
     # 行 = 时段（3 行），列 = 点位（5 列），与官网「5 点位 × 3 时段」一致
@@ -152,14 +159,50 @@ def main():
                                   xlabel="仿真帧（1 s/帧）", ylabel="状态等级",
                                   width=680, height=260))
 
+    # 状态机转移图：把「什么条件 → 什么光效」画成可读的框图
+    fsm_states = [
+        {"name": "QUIET", "light": "绿色常亮（低亮度）", "color": "#2f9e44",
+         "cond": "连续 5 帧 < 阈值−12 dB"},
+        {"name": "NORMAL", "light": "蓝色常亮", "color": "#1971c2",
+         "cond": "连续 5 帧回落滞回带"},
+        {"name": "WARN", "light": "黄色慢闪 1 Hz", "color": "#f08c00",
+         "cond": "连续 3 帧 ≥ 阈值"},
+        {"name": "ALERT", "light": "红色快闪 2 Hz + 蜂鸣", "color": "#e5484d",
+         "cond": "连续 3 帧 ≥ 阈值+6 dB"},
+    ]
+    fsm_edges = [
+        {"from": "QUIET", "to": "NORMAL", "label": "回落滞回带", "style": "up"},
+        {"from": "NORMAL", "to": "WARN", "label": "连续 3 帧超阈", "style": "up"},
+        {"from": "WARN", "to": "ALERT", "label": "连续 3 帧超阈 +6", "style": "up"},
+        {"from": "ALERT", "to": "WARN", "label": "连续 5 帧回落", "style": "down"},
+        {"from": "WARN", "to": "NORMAL", "label": "连续 5 帧回落", "style": "down"},
+        {"from": "NORMAL", "to": "QUIET", "label": "连续 5 帧 < −12", "style": "down"},
+        {"from": "WARN", "to": "WARN", "label": f"峰值 ≥ 阈值+{fsm.PEAK_DELTA:.0f} dB",
+         "style": "peak"},
+    ]
+    core.save_svg(RESULTS / "06_alert_fsm.svg", 680, 400,
+                  core.fsm_diagram(fsm_states, fsm_edges,
+                                   title="声学超标自动提醒光效逻辑 · 状态机",
+                                   footnote="实现见 analyze_noise.py 的 LightAlertFSM（可运行代码）"))
+
     md = [
         "# 课题 06 · 声学超标自动提醒光效逻辑", "",
         "> 由 `analyze_noise.py` 生成，可并入本目录 README.md。", "",
+        "![光效状态机](../results/06_alert_fsm.svg)", "",
+        "## 设计目标", "",
+        "校园噪声超标提醒最容易犯的错是「一超就红、一降就绿」——在阈值附近来回跳变，",
+        "看的人反而注意不到真正的超标。本套逻辑解决三件事：",
+        "",
+        "1. **不抖**：用「连续 N 帧确认 + 滞回带」把临界波动滤掉；",
+        "2. **看得懂**：光效分 4 级，颜色对应严重程度，一眼能判断该不该管；",
+        "3. **不漏报**：瞬时峰值（哪怕等效声级还没到阈值）也触发短闪，噪声偶发尖峰不丢。", "",
         "## 阈值分级", "",
         "| 时段 | 阈值 | 说明 |", "|---|---|---|",
         "| 早 07:00–09:00 | 55 dB | 教学区管理阈值，参考 GB 3096 1 类区昼间 |",
         "| 午 11:00–14:00 | 55 dB | 同上 |",
         "| 晚 20:00–22:00 | 50 dB | 校园自习时段自定收紧 |", "",
+        "> 阈值来源写明：GB 3096-2008《声环境质量标准》1 类区昼间 55 dB 为标准限值；",
+        "> " + "晚间 50 dB 是针对校园晚自习场景的自定收紧值，**不是国标限值**，报告里如实区分。", "",
         "## 状态机", "",
         "| 状态 | 光效 | 进入条件 |", "|---|---|---|",
         "| QUIET | 绿色常亮（低亮度） | 连续 5 帧低于 阈值−12 dB |",
@@ -170,6 +213,13 @@ def main():
         f"- 瞬时峰值 ≥ 阈值+{fsm.PEAK_DELTA} dB 触发单次短闪，不改变主状态",
         "- 采样周期 1 s，取滑动 60 s 等效声级；装置可用 ESP32-S3 + WS2812 灯环实现",
         "- 状态机实现见 `analyze_noise.py` 的 `LightAlertFSM` 类，**是可运行代码而非伪代码**", "",
+        "### 三个关键参数为什么这么定", "",
+        "| 参数 | 取值 | 理由 |", "|---|---|---|",
+        "| 升级确认帧数 | 3 帧（3 s） | 单帧可能撞上关门声、拖椅声；连续 3 帧超阈才算真超标 |",
+        "| 降级确认帧数 | 5 帧（5 s） | 比升级慢，是**故意的**——超标后不应立刻降级，给人留出处理时间 |",
+        "| 滞回带 | 3.0 dB | 升级线 `阈值`、降级线 `阈值−3 dB` 之间留出空档，两个方向不共用同一条线 |",
+        "| 瞬时峰值 | +10 dB | 差 10 dB 的尖峰（关门、刹车）在 A 计权下相当于响度差 10 倍，不能忽略 |", "",
+        "![状态时间线](../results/06_alert_timeline.svg)", "",
         "```python",
         "if peak >= limit + 10: emit(PEAK_FLASH)",
         "if leq >= limit:",
@@ -189,6 +239,8 @@ def main():
         "- `H04` 最小 7 dB、`H15` 最小 18 dB 为 App 启动瞬间麦克风未稳定的爬升假值，",
         "  原始记录保留不删不改，平均值仍可参考，最小值不纳入统计。",
         "- 雨天 / 校园活动会抬高食堂与运动场读数，已在 CSV 的 `weather` / `note` 列预留归因字段。",
+        "- 状态机当前**未接真实硬件**：仿真用实测数据驱动，光效输出为状态字符串；",
+        "  接 WS2812 灯环时把 `LIGHT[state]` 映射成 RGB 与闪烁频率即可，状态机逻辑无需改动。",
     ]
     (RESULTS / "06_alert_logic.md").write_text("\n".join(md) + "\n", encoding="utf-8")
     print(f"超标组数：{sum(1 for d in out if d['is_exceed'] == '是')} / {len(out)}")

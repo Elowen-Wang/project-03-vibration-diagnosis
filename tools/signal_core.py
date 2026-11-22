@@ -399,12 +399,39 @@ def bar_chart(categories, values, title="", ylabel="", width=680, height=280,
     return "".join(b)
 
 
-def radar_chart(categories, series, title="", width=680, height=340, vmax=None):
-    """series: [{'name':str,'values':[float...],'color':str}, ...]"""
-    cx, cy, radius = width / 2, height / 2 + 10, min(width, height) / 2 - 58
+def radar_chart(categories, series, title="", width=680, height=340, vmax=None,
+                vmin=0, ring_labels=None, limits=None, limit_labels=None,
+                show_values=True, footnote="", scale_bar=True, value_fmt="{:g}"):
+    """5 轴雷达图。
+
+    categories : 5 个轴标签（点位）
+    series     : [{'name','values','color'}, ...]，values 与 categories 等长
+    vmin/vmax  : 径向标尺范围（dB）
+    ring_labels: 每个刻度环对应的数值列表（默认按 vmin→vmax 等分）
+    limits     : 与 series 等长的阈值列表（如各时段阈值），画成虚线参考多边形
+    limit_labels: 与 limits 等长的阈值名称（如「早 55 dB」）
+    scale_bar  : 是否画右上角迷你刻度尺（归一化图设 False）
+    value_fmt  : 数值标签格式
+    """
+    # 布局：标题区在上、图例区在下，中间留给雷达本体。
+    # 竖直跨度由轴标签位置精确算出（不手写常数）：
+    #   标签统一画在 1.14r 处，dy 系数 = 1.14·sin(-90° + 360°·i/n)
+    #   上极值 = 1.14·|min dy|，下极值 = 1.14·max dy，再加字号余量。
+    title_h = 44 if title else 10
+    legend_h = 50 if limits else 32
+    usable_h = height - title_h - legend_h
+    dys = [1.14 * math.sin(-math.pi / 2 + 2 * math.pi * i / max(len(categories), 1))
+           for i in range(len(categories))]
+    vert_span = (max(dys) - min(dys)) + 0.14
+    r_h = usable_h / vert_span
+    radius = min(r_h, width / 2 - 78)
+    cx = width / 2
+    cy = title_h - min(dys) * radius
     n = len(categories)
     allv = [v for s in series for v in s["values"]]
     vmax = vmax or (max(allv + [1]) * 1.15)
+    if vmin >= vmax:
+        vmin = 0.0
     b = []
     if title:
         b.append(f'<text x="24" y="24" font-size="14" font-weight="500" fill="{INK}">{_esc(title)}</text>')
@@ -413,7 +440,19 @@ def radar_chart(categories, series, title="", width=680, height=340, vmax=None):
         ang = -math.pi / 2 + 2 * math.pi * i / n
         return cx + radius * ratio * math.cos(ang), cy + radius * ratio * math.sin(ang)
 
-    for ring in (0.25, 0.5, 0.75, 1.0):
+    def pt_ang(i, ang, ratio):
+        return cx + radius * ratio * math.cos(ang), cy + radius * ratio * math.sin(ang)
+
+    def val_ratio(v):
+        """数值 → 径向比例，vmin 之下压到轴心（未采集格占位）。"""
+        return min(max((v - vmin) / (vmax - vmin), 0.0), 1.0)
+
+    # 刻度环（不标数字，数字统一放在右上角迷你标尺上，避免与数据标签打架）
+    rings = (0.25, 0.5, 0.75, 1.0)
+    if ring_labels is None:
+        step = (vmax - vmin) / 4.0
+        ring_labels = [round(vmin + step * (i + 1)) for i in range(4)]
+    for ring in rings:
         poly = " ".join(f"{x:.1f},{y:.1f}" for x, y in (pt(i, ring) for i in range(n)))
         b.append(f'<polygon points="{poly}" fill="none" stroke="{GRID}" stroke-width="0.5"/>')
     for i, c in enumerate(categories):
@@ -423,16 +462,192 @@ def radar_chart(categories, series, title="", width=680, height=340, vmax=None):
         anchor = "middle" if abs(lx - cx) < 20 else ("start" if lx > cx else "end")
         b.append(f'<text x="{lx:.1f}" y="{ly + 4:.1f}" font-size="11" fill="{MUTED}" '
                  f'text-anchor="{anchor}">{_esc(c)}</text>')
+
+    # 迷你标尺：把径向刻度换算成一条水平尺，位置对应环的比例
+    if ring_labels and scale_bar:
+        gx0, gx1, gy = width - 182, width - 30, 58
+        b.append(f'<text x="{gx1}" y="{gy - 12}" font-size="9" fill="{MUTED}" '
+                 f'text-anchor="end">径向刻度 dB</text>')
+        b.append(f'<line x1="{gx0}" y1="{gy}" x2="{gx1}" y2="{gy}" stroke="{GRID}" stroke-width="1"/>')
+        ticks = [(0.0, vmin)] + [((i + 1) / 4.0, ring_labels[i]) for i in range(len(ring_labels))]
+        for t, val in ticks:
+            x = gx0 + (gx1 - gx0) * t
+            b.append(f'<line x1="{x:.1f}" y1="{gy - 3}" x2="{x:.1f}" y2="{gy + 3}" '
+                     f'stroke="{GRID}" stroke-width="1"/>')
+            b.append(f'<text x="{x:.1f}" y="{gy + 14}" font-size="8" fill="{MUTED}" '
+                     f'text-anchor="middle">{val:.0f}</text>')
+
+    # 阈值参考多边形（虚线）：各时段阈值不同，画出后才能看出哪些轴越线
+    if limits:
+        for si, lim in enumerate(limits):
+            if lim is None:
+                continue
+            s = series[si]
+            poly = " ".join(f"{x:.1f},{y:.1f}" for x, y in
+                            (pt(i, val_ratio(lim)) for i in range(n)))
+            b.append(f'<polygon points="{poly}" fill="none" stroke="{s.get("color", MUTED)}" '
+                     f'stroke-width="1.1" stroke-dasharray="5 4" stroke-opacity="0.85"/>')
+
     for idx, s in enumerate(series):
         color = s.get("color") or PALETTE[idx % len(PALETTE)]
         poly = " ".join(f"{x:.1f},{y:.1f}" for x, y in
-                        (pt(i, min(v / vmax, 1.0)) for i, v in enumerate(s["values"])))
+                        (pt(i, val_ratio(v)) for i, v in enumerate(s["values"])))
         b.append(f'<polygon points="{poly}" fill="{color}" fill-opacity="0.13" stroke="{color}" stroke-width="1.8"/>')
-        for x, y in (pt(i, min(v / vmax, 1.0)) for i, v in enumerate(s["values"])):
+        for i, v in enumerate(s["values"]):
+            x, y = pt(i, val_ratio(v))
             b.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="2.6" fill="{color}"/>')
-        lx = 24 + idx * 140
-        b.append(f'<rect x="{lx}" y="{height - 22}" width="10" height="10" rx="2" fill="{color}"/>')
-        b.append(f'<text x="{lx + 15}" y="{height - 13}" font-size="11" fill="{MUTED}">{_esc(s["name"])}</text>')
+
+    # 数值标签错位：按「每条轴上的数值从大到小排序」分配径向槽位。
+    # 同一轴上，数值大的排外圈、小的排内圈 → 标签天然分层，不会互相压字。
+    rank = {}
+    for i in range(n):
+        order = sorted(range(len(series)), key=lambda j: series[j]["values"][i], reverse=True)
+        for slot, j in enumerate(order):
+            rank[(j, i)] = slot
+    n_slot = len(series)
+    for idx, s in enumerate(series):
+        color = s.get("color") or PALETTE[idx % len(PALETTE)]
+        for i, v in enumerate(s["values"]):
+            ang = -math.pi / 2 + 2 * math.pi * i / n
+            slot = rank[(idx, i)]
+            # 槽位 0 = 最外圈；步长 0.075 保证相邻槽位至少差一个标签高度
+            rad = val_ratio(v) + 0.075 + (n_slot - 1 - slot) * 0.075
+            vx, vy = pt_ang(i, ang, min(rad, 0.985))
+            # 切向再拉开一点，彻底避免相邻槽位的字边缘相碰
+            tx, ty = -math.sin(ang), math.cos(ang)
+            vx += tx * (slot - (n_slot - 1) / 2.0) * 10.0
+            vy += ty * (slot - (n_slot - 1) / 2.0) * 10.0
+            vx = min(max(vx, 22), width - 22)
+            vy = min(max(vy, 38), height - 44)
+            anchor = "middle" if abs(vx - cx) < 20 else ("start" if vx > cx else "end")
+            b.append(f'<text x="{vx:.1f}" y="{vy + 3:.1f}" font-size="9" fill="{color}" '
+                     f'font-weight="600" text-anchor="{anchor}">{value_fmt.format(v)}</text>')
+
+    # 图例：色块 + 名称；阈值另起一行做虚线说明
+    # 图例放在画布底部；雷达图轴标签可能伸到底部，故按 series 数量分两排排布
+    leg_cols = max(len(series), 1)
+    leg_rows = 1 if leg_cols <= 4 else 2
+    per_row = -(-leg_cols // leg_rows)
+    for idx, s in enumerate(series):
+        color = s.get("color") or PALETTE[idx % len(PALETTE)]
+        row, col = divmod(idx, per_row)
+        lx = 24 + col * 140
+        ly = height - 40 + row * 18
+        b.append(f'<rect x="{lx}" y="{ly}" width="10" height="10" rx="2" fill="{color}"/>')
+        b.append(f'<text x="{lx + 15}" y="{ly + 9}" font-size="11" fill="{MUTED}">{_esc(s["name"])}</text>')
+        if limits and idx < len(limits) and limits[idx] is not None:
+            lbl = (limit_labels[idx] if limit_labels and idx < len(limit_labels)
+                   else f"阈值 {limits[idx]:.0f} dB")
+            b.append(f'<line x1="{lx}" y1="{ly + 17}" x2="{lx + 14}" y2="{ly + 17}" '
+                     f'stroke="{color}" stroke-width="1.1" stroke-dasharray="5 4"/>')
+            b.append(f'<text x="{lx + 19}" y="{ly + 21}" font-size="9" fill="{MUTED}">{_esc(lbl)}</text>')
+    if footnote:
+        b.append(f'<text x="{width - 24}" y="{height - 13}" font-size="9" fill="{MUTED}" '
+                 f'text-anchor="end">{_esc(footnote)}</text>')
+    return "".join(b)
+
+
+def fsm_diagram(states, transitions, title="", width=680, height=420, footnote=""):
+    """状态机转移图（声学超标提醒光效逻辑用）。
+
+    states     : [{'name','light','color','cond'}]
+    transitions: [{'from','to','label','style'}]  style: 'up' | 'down' | 'peak'
+                 up/down 画实线箭头（升级/降级），peak 画独立旁注箭头。
+    """
+    b = []
+    if title:
+        b.append(f'<text x="24" y="24" font-size="14" font-weight="500" fill="{INK}">{_esc(title)}</text>')
+
+    n = len(states)
+    box_w, box_h = 132, 84
+    gap = (width - 48 - n * box_w) / max(n - 1, 1)
+    y0 = 92
+    pos = {}
+    for i, s in enumerate(states):
+        x = 24 + i * (box_w + gap)
+        pos[s["name"]] = (x, y0, box_w, box_h)
+        b.append(f'<rect x="{x:.1f}" y="{y0}" width="{box_w}" height="{box_h}" rx="10" '
+                 f'fill="{s["color"]}" fill-opacity="0.10" stroke="{s["color"]}" stroke-width="1.8"/>')
+        b.append(f'<text x="{x + box_w / 2:.1f}" y="{y0 + 24}" font-size="13" font-weight="700" '
+                 f'fill="{s["color"]}" text-anchor="middle">{_esc(s["name"])}</text>')
+        b.append(f'<text x="{x + box_w / 2:.1f}" y="{y0 + 42}" font-size="10" fill="{INK}" '
+                 f'text-anchor="middle">{_esc(s.get("light", ""))}</text>')
+        # 条件说明分两行排，避免长文本溢出方框
+        cond = s.get("cond", "")
+        half = len(cond) // 2
+        if len(cond) > 14:
+            c1, c2 = cond[:half], cond[half:]
+        else:
+            c1, c2 = cond, ""
+        b.append(f'<text x="{x + box_w / 2:.1f}" y="{y0 + 58}" font-size="9" fill="{MUTED}" '
+                 f'text-anchor="middle">{_esc(c1)}</text>')
+        if c2:
+            b.append(f'<text x="{x + box_w / 2:.1f}" y="{y0 + 70}" font-size="9" fill="{MUTED}" '
+                     f'text-anchor="middle">{_esc(c2)}</text>')
+
+    def arrow(x1, y1, x2, y2, color, dash=True):
+        d = ' stroke-dasharray="4 3"' if dash else ""
+        # 箭头头部
+        import math as _m
+        ang = _m.atan2(y2 - y1, x2 - x1)
+        hl = 8
+        hx1 = x2 - hl * _m.cos(ang - 0.42)
+        hy1 = y2 - hl * _m.sin(ang - 0.42)
+        hx2 = x2 - hl * _m.cos(ang + 0.42)
+        hy2 = y2 - hl * _m.sin(ang + 0.42)
+        return (f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" '
+                f'stroke="{color}" stroke-width="1.5"{d}/>'
+                f'<polygon points="{x2:.1f},{y2:.1f} {hx1:.1f},{hy1:.1f} {hx2:.1f},{hy2:.1f}" fill="{color}"/>')
+
+    # 横向转移箭头：画在方框之间，标签居中
+    for tr in transitions:
+        f_, t_ = tr["from"], tr["to"]
+        if f_ not in pos or t_ not in pos:
+            continue
+        style = tr.get("style", "up")
+        x1, y1, w1, h1 = pos[f_]
+        x2, y2, w2, h2 = pos[t_]
+        if style == "peak":
+            continue
+        yy = y1 - 26 if style == "up" else y1 + h1 + 26
+        if x2 > x1:  # 向右
+            ax1, ax2 = x1 + w1 + 4, x2 - 6
+        else:        # 向左
+            ax1, ax2 = x1 - 4, x2 + w2 + 6
+        col = "#C2410C" if style == "up" else "#0F766E"
+        b.append(arrow(ax1, yy, ax2, yy, col))
+        lx = (ax1 + ax2) / 2
+        ly = yy - 7 if style == "up" else yy + 13
+        b.append(f'<text x="{lx:.1f}" y="{ly:.1f}" font-size="9" fill="{col}" '
+                 f'text-anchor="middle">{_esc(tr["label"])}</text>')
+
+    # 峰值短闪：独立旁注
+    for tr in transitions:
+        if tr.get("style") != "peak":
+            continue
+        x1, y1, w1, h1 = pos[tr["from"]]
+        py = y1 + h1 + 54
+        b.append(f'<rect x="{x1:.1f}" y="{py}" width="{w1}" height="40" rx="8" '
+                 f'fill="#7C2D12" fill-opacity="0.08" stroke="#7C2D12" stroke-width="1.2" '
+                 f'stroke-dasharray="4 3"/>')
+        b.append(f'<text x="{x1 + w1 / 2:.1f}" y="{py + 16}" font-size="10" font-weight="600" '
+                 f'fill="#7C2D12" text-anchor="middle">{_esc(tr["label"])}</text>')
+        b.append(f'<text x="{x1 + w1 / 2:.1f}" y="{py + 30}" font-size="9" fill="{MUTED}" '
+                 f'text-anchor="middle">不改变主状态</text>')
+
+    # 图例
+    lg = [("升级路径（连续 3 帧确认）", "#C2410C", "solid"),
+          ("降级路径（连续 5 帧 + 滞回带）", "#0F766E", "dash"),
+          ("瞬时事件（单次触发）", "#7C2D12", "dash")]
+    ly0 = height - 42
+    for i, (txt, col, _) in enumerate(lg):
+        y = ly0 + i * 15
+        b.append(f'<line x1="24" y1="{y}" x2="46" y2="{y}" stroke="{col}" stroke-width="1.5" '
+                 f'{"stroke-dasharray=\"4 3\"" if i == 1 else ""}/>')
+        b.append(f'<text x="52" y="{y + 3}" font-size="9" fill="{MUTED}">{_esc(txt)}</text>')
+    if footnote:
+        b.append(f'<text x="{width - 24}" y="{height - 12}" font-size="9" fill="{MUTED}" '
+                 f'text-anchor="end">{_esc(footnote)}</text>')
     return "".join(b)
 
 

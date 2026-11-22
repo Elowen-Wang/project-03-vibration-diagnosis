@@ -109,7 +109,11 @@ def main() -> int:
         n["source"] = f"标准格←{src}"
         n["note"] = f"来源{src}：{why}"
         s["grid_slot"] = rid
-        s["note"] = (s["note"] + f"｜已归入标准格 {rid}（数值见 {rid} 行）").strip("｜")
+        # 幂等：先剥掉历史上重复追加的同类标记，再写一次，避免脚本重跑时标记越堆越多
+        tag = f"已归入标准格 {rid}（数值见 {rid} 行）"
+        parts = [p for p in s["note"].split("｜")
+                 if p.strip() and not p.strip().startswith("已归入标准格")]
+        s["note"] = "｜".join(parts + [tag])
 
     for rid in DIRECT:
         if rid in by_id:
