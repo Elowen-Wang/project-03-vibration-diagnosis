@@ -112,7 +112,7 @@ def main():
               for i, p in enumerate(PERIODS)]
     title = ("校园五点位 × 三时段噪声地图（dB，标准 15 组已完成 "
              f"{len(standard)}/15，未采集格按 0 占位）" if len(standard) < 15
-             else "校园五点位 × 三时段噪声地图（15 组，dB）")
+             else "校园五点位 × 三时段噪声地图（标准 15 组全采集，dB）")
     core.save_svg(RESULTS / "06_noise_radar.svg", 680, 340,
                   core.radar_chart(SPOTS, series, title=title, vmax=85))
 
@@ -124,7 +124,8 @@ def main():
                                    limits=[LIMITS.get(p, 55.0) for p in PERIODS],
                                    title="标准 15 组声学数据表 · 点位 × 时段矩阵",
                                    note=f"已完成 {len(standard)}/15 格；虚线格为未采集，红框为超出时段阈值"))
-    print(f"雷达图 -> results/06_noise_radar.svg（5 点位 × 3 时段完整矩阵）")
+    print(f"雷达图 -> results/06_noise_radar.svg（5 点位 × 3 时段完整矩阵，"
+          f"{len(standard)}/15 格已采集）")
     print(f"矩阵热力图 -> results/06_noise_matrix.svg（{len(standard)}/15 格已采集）")
 
     # 光效逻辑状态机仿真
