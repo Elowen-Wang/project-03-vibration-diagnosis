@@ -119,8 +119,11 @@ def main() -> int:
         if rid in by_id:
             by_id[rid]["grid_slot"] = rid
             by_id[rid]["source"] = "标准格直采"
-            by_id[rid]["note"] = ("标准格直采记录（11-20 新采，原始报告即本组）；"
-                                  + by_id[rid]["note"])
+            # 幂等：先剥掉历史上重复追加的同类标记，再写一次，避免脚本重跑时标记越堆越多
+            tag = "标准格直采记录（11-20 新采，原始报告即本组）"
+            parts = [p for p in by_id[rid]["note"].split("；")
+                     if p.strip() and p.strip() != tag]
+            by_id[rid]["note"] = "；".join(parts + [tag])
 
     # 槽位定义行（N01–N15 中未被填的）保持空值，只留 period/location 供人读
     for r in rows:
@@ -129,11 +132,12 @@ def main() -> int:
             pass
 
     shutil.copy(CSV, CSV.with_suffix(".csv.bak"))
-    with open(CSV, "w", encoding="utf-8-sig", newline="") as f:
+    with open(CSV, "w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=head)
         w.writeheader()
         for r in rows:
             w.writerow({k: r.get(k, "") for k in head})
+    CSV.with_suffix(".csv.bak").unlink()
 
     filled = [r for r in rows if r["record_id"].startswith("N") and r["avg_db"]]
     h_rows = [r for r in rows if r["record_id"].startswith("H") and r["avg_db"]]
