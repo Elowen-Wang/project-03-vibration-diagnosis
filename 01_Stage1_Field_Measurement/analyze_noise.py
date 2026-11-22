@@ -242,7 +242,7 @@ def main():
         "- 状态机当前**未接真实硬件**：仿真用实测数据驱动，光效输出为状态字符串；",
         "  接 WS2812 灯环时把 `LIGHT[state]` 映射成 RGB 与闪烁频率即可，状态机逻辑无需改动。",
     ]
-    (RESULTS / "06_alert_logic.md").write_text("\n".join(md) + "\n", encoding="utf-8")
+    core.write_text(RESULTS / "06_alert_logic.md", "\n".join(md) + "\n")
     print(f"超标组数：{sum(1 for d in out if d['is_exceed'] == '是')} / {len(out)}")
     print("已输出 06_summary.csv / 06_noise_bars.svg / 06_noise_radar.svg / "
           "06_noise_matrix.svg / 06_alert_timeline.svg / 06_alert_logic.md")

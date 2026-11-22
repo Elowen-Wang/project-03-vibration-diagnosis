@@ -132,8 +132,9 @@ def main() -> int:
             pass
 
     shutil.copy(CSV, CSV.with_suffix(".csv.bak"))
+    # lineterminator="\n"：csv 模块默认输出 CRLF，这里强制 LF，与仓库其余文件一致
     with open(CSV, "w", encoding="utf-8", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=head)
+        w = csv.DictWriter(f, fieldnames=head, lineterminator="\n")
         w.writeheader()
         for r in rows:
             w.writerow({k: r.get(k, "") for k in head})

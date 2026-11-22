@@ -82,7 +82,7 @@
 
 ```bat
 python 01_Stage1_Field_Measurement\analyze_gait.py            :: 正式：读本目录真实 CSV（快跑已重采，自动纳入 4 类）
-python 01_Stage1_Field_Measurement\analyze_gait.py --demo     :: 演示：合成数据，只写 results/_demo/
+python 01_Stage1_Field_Measurement\analyze_gait.py --demo     :: 演示：合成数据，只写系统临时目录
 :: 注：--include-invalid 旧开关已无实际作用（不再有硬编码排除），保留仅为兼容历史命令
 ```
 
@@ -101,7 +101,7 @@ else:                           平地慢走   # 双脚交替，能量落在 2×
 ```
 
 产物落在 `../results/`：`08_features.csv`、`08_wave_*.svg`（5 张）、`08_radar.svg`、`08_feature_bars.svg`、`08_confusion.svg`、`08_threshold_rules.md`。
-`--demo` 的产物全部隔离在 `results/_demo/`，**不会覆盖真实结论**，也不能写进报告。
+`--demo` 的产物全部隔离在系统临时目录，**不写进仓库、不会覆盖真实结论**，也不能写进报告。
 11/16 的 3 类版本备份在 `../results/archive_1116/`，用于展示迭代过程。
 
 ### 四类姿态的加速度波形对比

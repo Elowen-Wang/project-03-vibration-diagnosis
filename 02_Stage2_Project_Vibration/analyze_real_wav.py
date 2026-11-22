@@ -127,7 +127,7 @@ def _report_pairs(pairs, title, out_md):
         lines.append(f"- {lab}：{m[i][i]}/{tot} = {(m[i][i] / tot * 100 if tot else 0):.0f}%")
     lines += ["", "> 分类器：标准化后的最近质心（nearest centroid），特征为 11 维时域+频域量。",
               "> 全程使用 Python 标准库实现 FFT，未调用任何机器学习框架，便于面试逐行解释。", ""]
-    (RESULTS / f"{out_md}.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    core.write_text(RESULTS / f"{out_md}.md", "\n".join(lines) + "\n")
     print(f"{title}：准确率 {acc * 100:.1f}%  -> results/{out_md}.md")
     return acc
 
@@ -244,7 +244,7 @@ def step_ablation():
         "不能只按消融排名取舍特征。",
         "- **边界说明**：消融基于同一批次 75 段数据做留一法，同一文件相邻样本仍高度相关，"
         "该结果反映的是「本次数据内的特征贡献」，不等于跨设备、跨天的真实贡献。", ""]
-    (RESULTS / "feature_ablation.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    core.write_text(RESULTS / "feature_ablation.md", "\n".join(lines) + "\n")
 
     pts = [(i + 1, a * 100) for i, (_, a, _) in enumerate(results)]
     core.save_svg(RESULTS / "feature_ablation.svg", 680, 300,
@@ -310,7 +310,7 @@ def step_noise():
               "- 边界说明：本实验是在**已有 WAV 上人工叠加高斯白噪声**，属于仿真压力测试，"
               "不等于真实嘈杂环境中的重采结果；若要更强的证据，需另找一天在真实背景噪声下补采。",
               "- 工程上的补救：采集时靠近声源 3–5 cm、加防风罩、时域多帧投票、频带能量比替代绝对幅度", ""]
-    (RESULTS / "noise_robustness.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    core.write_text(RESULTS / "noise_robustness.md", "\n".join(lines) + "\n")
     body = core.line_chart([{"name": "准确率", "points": points, "color": core.PALETTE[0]}],
                            title="抗噪鲁棒性：准确率随信噪比变化", xlabel="信噪比 dB（越小越吵）",
                            ylabel="准确率 %", width=680, height=280, ymin=0, ymax=105)

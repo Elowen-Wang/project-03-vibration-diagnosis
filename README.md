@@ -111,23 +111,25 @@
 - ✅ **补登记 11-19 晚间三份报告 → 15 格全满**：复核时发现 `11-19晚上图书馆/主干道/操场 (2).jpg` 三份分贝报告**此前完全未登记**（文件名带 `(2)` 后缀被误当现场照片）。逐张打开核对：图书馆 20:34（37/58/40）、主干道 20:41（49/71/59）、操场 20:49（40/68/47），检测时间与现场水印吻合（水印地点直书「深圳城市职业学院图书馆/操场/干道」），三点位落在晚 20:00–22:00 窗口内，N06/N08/N09 补齐。**教训：不靠文件名筛选原始数据，改为逐张打开核对。**
 - ✅ **门牌证据定案**：现场照片门牌清晰可读「426 产业项目实训室」「425 智能制造实训室」，与官网 426 实践工坊同址，据此确认「实验室走廊 = 官网实训室走廊」。
 - ✅ **项目三特征消融**：逐个屏蔽 11 维特征并重新标定阈值重测，`crest` 最关键（约 +4.0 pp），`dominant_hz` 在本批数据中冗余（约 −2.7 pp，跨设备稳健性另论）。
+- ✅ **仓库可读性整理**（解决「VS Code 打开/转换失败」）：定位 6 类格式问题并全部修掉 —— `noise_log.csv` 去 BOM（原先表头显示成 `﻿record_id`，编码转换直接报错）、全仓库 71 个文本文件统一 LF（原先 CRLF/LF 混用 50 : 24）、`盲测演示.html` 补自闭合标签并用 CDATA 包裹脚本（原先严格 XML 解析报 mismatched tag）、补 `.gitattributes` 显式声明 WAV/MP4/JPG 为 binary、`.gitignore` 忽略缓存目录。
+- ✅ **修一个真实数据缺陷**：`build_standard_grid.py` 的直采分支漏做幂等，每重跑一次就把标记追加一遍，`noise_log.csv` 里 N11/N12/N14 的 note 累积成 290 字符重复文本 —— 已补幂等逻辑，连跑 3 次验证稳定在 47–56 字符。
+- ✅ **清理草稿**：删除 `results/_demo/`（合成演示数据，自报准确率 39.1%、文件内自标「不得写进结论」）与 `archive_1116/` 中 4 个与正式结果 md5 相同的冗余波形图；`--demo` 改为输出到系统临时目录，不再往仓库写草稿。**所有结果数字未变，只动格式与草稿。**
 - 📌 局限不变并如实写明：跨日 held-out 0/15、加速度通道未采、课题 08 每类仅一次采集。**课题 06 标准格已补齐至 15/15。**
 
 ## 五、目录结构（11/22 实际）
 
 ```
 project-03-vibration-diagnosis/
-├── README.md · DAILY_PLAN.md · AI_Chat_Log.md
+├── README.md · DAILY_PLAN.md · AI_Chat_Log.md · 提交指引.md
 ├── AI使用报告/                   README + 三阶段截图 + 课题08核对报告.html
 ├── process_logs/                 14 份日志 + README
-├── tools/                        signal_core.py（零依赖内核）· build_standard_grid.py（标准格归位）· make_templates.py · make_blind_demo.py
+├── tools/                        signal_core.py（零依赖内核）· build_standard_grid.py（标准格归位）· normalize_text.py（编码/换行规范化）· make_templates.py · make_blind_demo.py
 ├── 01_Stage1_Field_Measurement/
 │   ├── README.md · noise_log.csv
 │   ├── analyze_noise.py · analyze_gait.py
-│   ├── 课题06/                   README + 20 份分贝报告 + 现场 JPG/MP4
+│   ├── 课题06/                   README + 23 份分贝报告 + 现场 JPG/MP4
 │   ├── 课题08/                   README + 交付清单.md + 5 组 CSV/MP4/meta
-│   ├── gait_raw/                 空（兼容早期 flat 目录计划）
-│   └── results/                  06_* / 08_* 图表与报告；archive_1116/ 旧版；_demo/ 合成演示产物
+│   └── results/                  06_* / 08_* 图表与报告；archive_1116/ 仅留 11/16 迭代证据
 └── 02_Stage2_Project_Vibration/
     ├── README.md · protocol.md · experiment_log.csv（75 行）· 交付清单.md · 实验照索引.md
     ├── analyze_real_wav.py      真实 WAV 分析主脚本
@@ -149,10 +151,11 @@ python 01_Stage1_Field_Measurement\analyze_gait.py
 python 02_Stage2_Project_Vibration\analyze_real_wav.py --all
 python tools\make_blind_demo.py
 python 02_Stage2_Project_Vibration\analyze_real_wav.py --check
+python tools\normalize_text.py
 ```
 
 只用 Python 标准库（csv / wave / struct / math / cmath），**无需 pip install numpy / scipy / matplotlib**；图表输出 SVG，GitHub 原生渲染。
-`analyze_gait.py --demo` 的合成产物只写 `results/_demo/`，不覆盖真实结论。旧 `fft_feature_extraction.py` 跑的是模拟正弦波，仅作早期探索记录，不作交付依据。
+`analyze_gait.py --demo` 的合成产物只写系统临时目录，不进仓库、不覆盖真实结论。旧 `fft_feature_extraction.py` 跑的是模拟正弦波，仅作早期探索记录，不作交付依据。
 
 ## 七、官网评分对照
 
@@ -205,7 +208,7 @@ python 02_Stage2_Project_Vibration\analyze_real_wav.py --check
 - 所有原始音频、照片、视频均为本人在真实环境采集，未用合成数据充当实测结果。
 - 课题 08 快跑旧版（3.88 s / 1 窗口）经核对判定无效，旧原始文件已由本人移除；其数值与判定理由以文字形式保留作过程证据，11/19 重采后恢复正常纳入，不静默改数。
 - 依据 [核对报告](./AI使用报告/第一阶段/课题08核对报告.html) 裁掉采集末尾低活动窗口，数量在 `08_threshold_rules.md` 逐文件列出，可复现。
-- 合成 CSV 与图表隔离在 `results/_demo/`，不计入结论；MP3 → WAV 只换容器、不恢复已丢失的高频。
+- 合成 CSV 与图表隔离在系统临时目录，不进仓库、不计入结论；MP3 → WAV 只换容器、不恢复已丢失的高频。
 - 11-05 的 7 dB、11-20 的 18 dB 均判定为 App 启动爬升假值，保留原始记录 + 标注归因，平均值可用、最小值不纳入统计，未重测；11-13 的 59 dB 与 11/04 同点位 38 dB 差约 20 dB，无对照实验，不写成昼夜规律。
 - 分贝报告的时间一律以 App「检测时间」为准，并逐张与现场水印时刻核对；App 自动生成的场景描述（如食堂写「汽车穿梭在马路上」）是按分贝套的模板文案，**不作点位依据**，点位以现场水印照为准；所有报告时间与水印一一吻合，未发现文件名与内容对调。
 - 事后补记的历史日志均在文首注明；`process_logs/` 里仍为空的日志不代填、不编造。

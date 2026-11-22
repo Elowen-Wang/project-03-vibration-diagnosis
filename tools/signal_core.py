@@ -35,11 +35,24 @@ def write_csv(path, rows, fieldnames=None):
     fieldnames = fieldnames or list(rows[0].keys())
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    # lineterminator="\n"：csv 模块默认输出 CRLF，这里强制 LF，
+    # 避免 Windows 上同一批文件一会儿 CRLF 一会儿 LF，编辑器反复显示「已修改」
     with open(path, "w", encoding="utf-8", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=fieldnames)
+        w = csv.DictWriter(f, fieldnames=fieldnames, lineterminator="\n")
         w.writeheader()
         for r in rows:
             w.writerow({k: r.get(k, "") for k in fieldnames})
+
+
+def write_text(path, text):
+    """统一的 LF 文本写入。
+
+    `Path.write_text` 在 Windows 上默认按 os.linesep（CRLF）落盘，
+    造成脚本产物与手写文件的换行符不一致。这里统一成 LF。
+    """
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(text.encode("utf-8"))
 
 
 def fnum(v, default=0.0):

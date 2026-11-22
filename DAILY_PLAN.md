@@ -295,7 +295,7 @@ python 02_Stage2_Project_Vibration\analyze_real_wav.py --all
 课题 08 的三个命令（**注意默认读真实数据**）：
 ```bat
 python 01_Stage1_Field_Measurement\analyze_gait.py                    :: 正式：读 课题08/ 真实 CSV
-python 01_Stage1_Field_Measurement\analyze_gait.py --demo              :: 演示：合成数据只写 results/_demo/
+python 01_Stage1_Field_Measurement\analyze_gait.py --demo              :: 演示：合成数据只写系统临时目录
 python 01_Stage1_Field_Measurement\analyze_gait.py --include-invalid   :: 临时把无效的快跑组纳入对比
 ```
 `--demo` 的产物已隔离，**不会覆盖真实结论**，但也**绝不能写进报告**。终端若打印「依据核对报告排除无效组」是正常提示，不是报错。

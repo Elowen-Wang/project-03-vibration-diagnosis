@@ -26,6 +26,7 @@ import argparse
 import math
 import random
 import sys
+import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -79,7 +80,8 @@ def demo_files(out):
         p = d / f"gait_{state}_demo.csv"
         core.write_csv(p, rows)
         paths.append((state, p))
-    print("[demo] 已生成 4 份演示 CSV 到 results/_demo/，仅用于验证脚本流程；正式 results/ 不受影响")
+    print(f"[demo] 已生成 4 份演示 CSV 到 {d}/，仅用于验证脚本流程；"
+          f"正式 results/ 不受影响，且不写入仓库")
     return paths
 
 
@@ -317,8 +319,8 @@ def main():
     ap.add_argument("--include-invalid", action="store_true",
                     help="把核对报告判定无效的快跑组也纳入（默认排除）")
     a = ap.parse_args()
-    # demo 的全部产物隔离到 results/_demo/，绝不覆盖真实数据的分析结论
-    OUT = RESULTS / "_demo" if a.demo else RESULTS
+    # demo 的全部产物隔离到系统临时目录，绝不写进仓库，也绝不覆盖真实数据的分析结论
+    OUT = Path(tempfile.gettempdir()) / "icec_gait_demo" if a.demo else RESULTS
     OUT.mkdir(parents=True, exist_ok=True)
     pairs = demo_files(OUT) if a.demo else real_files()
     if not pairs:
@@ -540,7 +542,7 @@ def main():
             "- 官网对第一阶段要的是「原始 CSV + 波形图 + 可解释阈值规则 + 现场证据」，"
             "并未要求高准确率；把分不开的原因讲清楚，比报一个挑出来的漂亮数字更重要。",
             "- 其余改进：每类补到 3 次以估计类内波动；尽量固定同一手机位置并写进日志。", ""]
-    (OUT / "08_threshold_rules.md").write_text("\n".join(md) + "\n", encoding="utf-8")
+    core.write_text(OUT / "08_threshold_rules.md", "\n".join(md) + "\n")
     print(f"重复分层交叉验证准确率 {cv_acc * 100:.1f}%（{cv_runs} 次评估）")
     print(f"留一整份源文件准确率 {lofo_acc * 100:.1f}%（{lofo_n} 窗口，更严格、更接近真实泛化）")
     print(f"全量自评准确率 {acc * 100:.1f}%")

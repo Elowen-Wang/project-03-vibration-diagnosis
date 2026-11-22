@@ -187,7 +187,7 @@ python 01_Stage1_Field_Measurement\analyze_noise.py             :: 出图 + 光�
 
 ```bat
 python 01_Stage1_Field_Measurement\analyze_gait.py            :: 正式：读 课题08/ 真实 CSV
-python 01_Stage1_Field_Measurement\analyze_gait.py --demo     :: 演示：合成数据只写 results/_demo/
+python 01_Stage1_Field_Measurement\analyze_gait.py --demo     :: 演示：合成数据只写系统临时目录
 ```
 
 ### 当前结果与诚实解读（2026-11-22 更新）
