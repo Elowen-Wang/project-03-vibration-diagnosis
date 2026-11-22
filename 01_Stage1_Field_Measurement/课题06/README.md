@@ -146,7 +146,16 @@ cd /d C:\Users\wangy\Desktop\project-03-vibration-diagnosis
 python 01_Stage1_Field_Measurement\analyze_noise.py
 ```
 
-产物见 `../results/`：`06_summary.csv`（汇总与超标判定）、`06_noise_bars.svg`（平均声级柱状图）、`06_noise_radar.svg`（点位 × 时段雷达图，进度版）、`06_alert_logic.md`（超标提醒光效状态机与仿真）。
+产物见 `../results/`：
+
+| 文件 | 内容 |
+|---|---|
+| `06_summary.csv` | 20 组汇总、超标判定与限值 |
+| `06_noise_bars.svg` | 各记录平均声级柱状图 |
+| `06_noise_radar.svg` | **5 点位 × 3 时段完整矩阵雷达图**，未采集格按 0 占位 |
+| `06_noise_matrix.svg` | **点位 × 时段矩阵热力图**，缺失格标注「未采集」、超标格红框，一眼看清完成度 |
+| `06_alert_timeline.svg` | 光效状态机仿真状态时间线 |
+| `06_alert_logic.md` | 超标提醒光效状态机、伪代码、仿真结果与数据边界 |
 
 光效逻辑：阈值按教学区管理值设早/午 55 dB、晚 50 dB，四态 `QUIET 绿常亮 → NORMAL 蓝常亮 → WARN 黄慢闪 1 Hz → ALERT 红快闪 2 Hz + 蜂鸣`，升级连续 3 帧确认、降级连续 5 帧确认、3 dB 滞回带防抖。
 

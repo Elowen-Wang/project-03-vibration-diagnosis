@@ -177,6 +177,124 @@ def spectral_features(signal, sample_rate, n_fft=None):
     return feats
 
 
+# --------------------------------------------------------------------------- 步态特征
+def cadence_features(az, sample_rate, prominence=1.2, min_gap_s=0.2):
+    """从垂直轴加速度提取步态节律特征（课题 08 专用）。
+
+    物理依据：
+      步频 cadence —— 每秒落地/蹬离次数，反映动作速率；
+      步频规整度 cad_cv —— 相邻步间隔的变异系数。平地行走双脚交替、节奏稳定，
+        上下楼梯每级高度不同、需要蹬伸，节奏抖动明显，这是「平地 vs 爬楼」
+        最稳健的判据（对手机位置与佩戴方式不敏感）；
+      1x/2x 能量比 ratio —— 步频主峰带与其二次谐波带的能量之比。平地行走时
+        双脚交替使垂向力主要出现在 2× 步频，比值大；上下楼梯以单脚支撑为主，
+        能量集中在 1× 步频，比值小。
+
+    返回 dict：cadence / cad_cv / align / ratio。
+    """
+    n = len(az)
+    out = {"cadence": 0.0, "cad_cv": 2.5, "align": 0.0, "ratio": 0.0}
+    if n < 16:
+        return out
+    centered = [v - mean(az) for v in az]
+    sd = std(centered) + 1e-9
+    peaks, last = [], -10 ** 9
+    gap = max(1, int(sample_rate * min_gap_s))
+    for i in range(1, n - 1):
+        if centered[i] > prominence * sd and centered[i] >= centered[i - 1] \
+                and centered[i] > centered[i + 1]:
+            if i - last > gap:
+                peaks.append(i)
+                last = i
+    cad = len(peaks) / (n / sample_rate)
+    out["cadence"] = cad
+    ivs = [(peaks[i + 1] - peaks[i]) / sample_rate for i in range(len(peaks) - 1)]
+    if len(ivs) >= 2 and mean(ivs) > 0:
+        out["cad_cv"] = std(ivs) / mean(ivs)
+    if cad <= 0.2:
+        return out
+    step = max(1, n // 4000)
+    freqs, mags = spectrum(centered[::step], sample_rate / step, n_fft=1024)
+    if not mags:
+        return out
+    lo1, hi1 = max(0.2, cad * 0.65), cad * 1.35
+    b1 = sum(m for f, m in zip(freqs, mags) if lo1 <= f <= hi1)
+    b2 = sum(m for f, m in zip(freqs, mags) if cad * 1.65 <= f <= cad * 2.35)
+    out["ratio"] = b1 / (b2 + 1e-12)
+    peak1 = max((m for f, m in zip(freqs, mags) if lo1 <= f <= hi1), default=0.0)
+    out["align"] = peak1 / (max(mags) + 1e-12)
+    return out
+
+
+def matrix_grid(row_labels, col_labels, cells, limits=None, title="",
+                width=680, height=340, note=""):
+    """点位 × 时段矩阵热力图：缺失格画斜线并标注「未采集」。
+
+    cells[i][j] 为数值或 None（未采集）。
+    limits 为每个**行**的阈值（行通常是时段，阈值是时段属性）；超标格描红边。
+    """
+    L, T = 110, 58
+    cell = min((width - L - 30) / max(len(col_labels), 1),
+               (height - T - 56) / max(len(row_labels), 1), 74)
+    b = []
+    if title:
+        b.append(f'<text x="24" y="24" font-size="14" font-weight="500" fill="{INK}">{_esc(title)}</text>')
+    b.append(f'<text x="24" y="42" font-size="11" fill="{MUTED}">{_esc(note)}</text>')
+    for j, c in enumerate(col_labels):
+        x = L + cell * j + cell / 2
+        b.append(f'<text x="{x:.1f}" y="{T - 12}" font-size="11" fill="{MUTED}" text-anchor="middle">{_esc(c)}</text>')
+    mx = max((v for row in cells for v in row if v is not None), default=1) or 1
+    for i, r in enumerate(row_labels):
+        y = T + cell * i
+        lim = limits[i] if limits and i < len(limits) else None
+        b.append(f'<text x="{L - 12}" y="{y + cell / 2 + 1:.1f}" font-size="11" fill="{INK}" '
+                 f'text-anchor="end">{_esc(r)}</text>')
+        if lim is not None:
+            b.append(f'<text x="{L - 12}" y="{y + cell / 2 + 14:.1f}" font-size="9" fill="{MUTED}" '
+                     f'text-anchor="end">阈值 {lim:.0f} dB</text>')
+        for j, c in enumerate(col_labels):
+            v = cells[i][j]
+            x = L + cell * j
+            if v is None:
+                b.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{cell - 3:.1f}" height="{cell - 3:.1f}" '
+                         f'rx="4" fill="none" stroke="{GRID}" stroke-width="1" stroke-dasharray="3 3"/>')
+                b.append(f'<text x="{x + cell / 2:.1f}" y="{y + cell / 2 + 4:.1f}" font-size="10" '
+                         f'fill="{MUTED}" text-anchor="middle">未采集</text>')
+                continue
+            ratio = min(v / mx, 1.0)
+            color = _heat_color(ratio)
+            over = lim is not None and v >= lim
+            b.append(f'<rect x="{x:.1f}" y="{y:.1f}" width="{cell - 3:.1f}" height="{cell - 3:.1f}" '
+                     f'rx="4" fill="{color}" fill-opacity="0.55" stroke="{"#e5484d" if over else color}" '
+                     f'stroke-width="{2 if over else 1}"/>')
+            b.append(f'<text x="{x + cell / 2:.1f}" y="{y + cell / 2 + 1:.1f}" font-size="14" '
+                     f'font-weight="600" fill="{INK}" text-anchor="middle">{v:.0f}</text>')
+            b.append(f'<text x="{x + cell / 2:.1f}" y="{y + cell / 2 + 15:.1f}" font-size="9" '
+                     f'fill="{MUTED}" text-anchor="middle">dB</text>')
+            if over:
+                b.append(f'<text x="{x + cell - 8:.1f}" y="{y + 14:.1f}" font-size="10" '
+                         f'fill="#e5484d" text-anchor="end">超标</text>')
+    ly = T + cell * len(row_labels) + 18
+    b.append(f'<rect x="{L}" y="{ly - 10}" width="11" height="11" rx="2" fill="#e5484d" fill-opacity="0.55" '
+             f'stroke="#e5484d" stroke-width="2"/>')
+    b.append(f'<text x="{L + 17}" y="{ly}" font-size="10" fill="{MUTED}">红框 = 超标</text>')
+    b.append(f'<rect x="{L + 110}" y="{ly - 10}" width="11" height="11" rx="2" fill="none" '
+             f'stroke="{GRID}" stroke-dasharray="3 3"/>')
+    b.append(f'<text x="{L + 127}" y="{ly}" font-size="10" fill="{MUTED}">虚线 = 未采集</text>')
+    return "".join(b)
+
+
+def _heat_color(ratio):
+    """低→高：蓝 → 青 → 绿 → 橙 → 红。"""
+    stops = [(0.29, 0.63, 0.94), (0.31, 0.85, 0.85), (0.44, 0.80, 0.53),
+             (0.98, 0.76, 0.31), (0.93, 0.36, 0.36)]
+    r = max(0.0, min(0.999, ratio)) * (len(stops) - 1)
+    i = int(r)
+    f = r - i
+    a, b2 = stops[i], stops[min(i + 1, len(stops) - 1)]
+    return "#" + "".join(f"{int((a[k] + (b2[k] - a[k]) * f) * 255):02x}" for k in range(3))
+
+
 # --------------------------------------------------------------------------- SVG
 def _esc(s):
     return html.escape(str(s), quote=True)

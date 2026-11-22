@@ -86,7 +86,7 @@
 
 | 文件 | 作用 |
 |---|---|
-| `analyze_real_wav.py` | 主脚本：读取真实 WAV、提特征、分类、盲测、抗噪、held-out、自检 |
+| `analyze_real_wav.py` | 主脚本：读取真实 WAV、提特征、分类、盲测、抗噪、**特征消融**、held-out、自检 |
 | `../tools/signal_core.py` | 零依赖内核：radix-2 FFT、频谱特征、WAV 读取（双声道/降采样）、SVG 绘图、最近质心分类器 |
 | `fft_feature_extraction.py` | **早期演示框架**：用 `np.sin` 生成模拟正弦波，仅保留为探索过程记录，**不作为交付依据** |
 
@@ -119,6 +119,7 @@ FFT 用迭代 radix-2 Cooley-Tukey 实现，加 Hann 窗、8192 点零填充；�
 | `results/loo_report.md` / `.svg` | 留一法 89.3% + 混淆矩阵 + 每类召回 |
 | `results/blind_report.md` / `.svg` | 同批次盲测 80.0% + 混淆矩阵 |
 | `results/noise_robustness.md` / `.svg` | 抗噪曲线、分档准确率、结论（11/18 由脚本按数据自动生成） |
+| `results/feature_ablation.md` / `.svg` | **特征消融分析**：11 维特征逐个屏蔽后的留一法准确率（11-22 新增） |
 | `blind_test/blind_detail.csv` · `盲测演示.html` | 15 段盲测逐条明细 + 可录屏演示页（12/15 = 80.0%） |
 | ~~`results/heldout_report.md`~~ | 跨日 held-out 未采集（0/15），**文件不存在**，如实列为局限 |
 | ~~`results/accel_features.csv`~~ | 加速度通道未采，**文件不存在**，如实列为局限 |
@@ -134,6 +135,33 @@ FFT 用迭代 radix-2 Cooley-Tukey 实现，加 Hann 窗、8192 点零填充；�
 - 10 dB 以上基本稳定（≥80%），**5 dB 开始明显退化，0 dB 接近随机**。
 - 工程含义：现场背景噪声大时，需要靠近声源（3–5 cm）、加防风罩、多帧投票，或改用频带能量比等相对特征替代绝对幅度。
 - 最易混淆组合已从本次数据写清：「进风遮挡 → 正常高速」在抗噪下混淆最多，归因见上方异常样本与结果段。
+
+### 特征消融分析（11-22 新增，脚本自动生成）
+
+回答的问题是：**这 11 维特征里哪些真正撑起了分类，哪些是冗余的**。
+做法：对每个特征单独「屏蔽」，只用剩余 10 维重新标定标准化参数与类中心，再用**留一法**评估（留一段测、其余训练，循环 75 段）。
+
+| 排名 | 屏蔽的特征 | 屏蔽后准确率 | 下降 | 物理含义 |
+|---|---|---|---|---|
+| 1 | `crest` | 85.3% | **+4.0 pp** | 峰值因数，冲击性（碰擦、失衡） |
+| 2 | `band3` | 86.7% | +2.7 pp | 第三频段能量 |
+| 3 | `band1` | 88.0% | +1.3 pp | 最低频段能量 |
+| 4–6 | `rms` / `std` / `band2` | 89.3% | ±0.0 pp | — |
+| 7–10 | `zcr` / `centroid` / `flatness` / `band4` | 90.7% | −1.3 pp | 相对量纲特征 |
+| 11 | `dominant_hz` | 92.0% | **−2.7 pp** | 主频，旋转频率指纹 |
+
+完整 11 维基线（留一法）**89.3%**。两条结论值得讲：
+
+- **本次数据里真正起决定作用的是「冲击形态」**（`crest`）与「低频段能量」（`band1`/`band3`），
+  而直觉上最像「旋转指纹」的 `dominant_hz` 屏蔽后准确率反而上升 2.7 pp。
+  原因是 5 个工况用的是同一台小风扇、转速本就接近，主频自然也接近；
+  工况差异主要体现在碰撞冲击与频带能量分布上。
+- **但「本次贡献」与「跨设备稳健性」要分开看**：`crest` 是绝对量纲，换采集距离/机型会漂移；
+  `dominant_hz`、`centroid` 这些相对量纲特征虽然本次冗余，恰恰是对设备漂移更稳健的量。
+  所以特征取舍不能只看消融排名。
+
+**边界**：消融基于同一批次 75 段做留一法，同文件相邻样本仍高度相关，反映的是「本次数据内的特征贡献」，
+不等于跨设备、跨天的真实贡献。跑 `python 02_Stage2_Project_Vibration\analyze_real_wav.py --ablation` 可复现。
 
 ### 观察到的异常样本（保留不删，2026-11-21 按数据更正）
 
@@ -283,6 +311,7 @@ python 02_Stage2_Project_Vibration\analyze_real_wav.py --extract
 python 02_Stage2_Project_Vibration\analyze_real_wav.py --classify
 python 02_Stage2_Project_Vibration\analyze_real_wav.py --blind
 python 02_Stage2_Project_Vibration\analyze_real_wav.py --noise
+python 02_Stage2_Project_Vibration\analyze_real_wav.py --ablation
 python 02_Stage2_Project_Vibration\analyze_real_wav.py --heldout
 python 02_Stage2_Project_Vibration\analyze_real_wav.py --check
 ```

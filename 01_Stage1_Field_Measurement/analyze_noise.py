@@ -92,30 +92,31 @@ def main():
     core.save_svg(RESULTS / "06_noise_bars.svg", 680, 300,
                   core.bar_chart(labels, vals, title="各记录平均声级 dB(A)", ylabel="dB"))
 
-    # 雷达图：标准 15 组填满才画，否则画已有分组的点位均值
+    # 噪声地图：始终以官网要求的「5 点位 × 3 时段」完整矩阵呈现。
+    # 无论采到几组，未采集的格子都保留占位（雷达图按 0 绘制、热力图画斜线标注），
+    # 这样老师看到的是完整矩阵结构 + 真实完成度，而不是缺格后只剩几条线。
     grid = {}
     for r in standard:
         grid[(r.get("period"), r.get("location"))] = core.fnum(r["avg_db"])
-    if len(standard) >= 15:
-        series = [{"name": p, "color": core.PALETTE[i],
-                   "values": [grid.get((p, s), 0) for s in SPOTS]}
-                  for i, p in enumerate(PERIODS)]
-        title = "校园五点位 × 三时段噪声地图（15 组，dB）"
-    else:
-        spot_vals = {}
-        for r in filled:
-            spot_vals.setdefault(r.get("location", "未标注"), []).append(core.fnum(r["avg_db"]))
-        cats = list(spot_vals.keys())[:6] or SPOTS
-        series = [{"name": "当前已采均值", "color": core.PALETTE[0],
-                   "values": [core.mean(spot_vals.get(c, [0])) for c in cats]}]
-        SPOTS_LOCAL = cats
-        series[0]["values"] = [core.mean(spot_vals.get(c, [0])) for c in SPOTS_LOCAL]
-        core.save_svg(RESULTS / "06_noise_radar.svg", 680, 340,
-                      core.radar_chart(SPOTS_LOCAL, series, title="当前已采点位均值 dB（待补 15 组标准表）", vmax=85))
-        print("雷达图（进度版）-> results/06_noise_radar.svg")
-    if len(standard) >= 15:
-        core.save_svg(RESULTS / "06_noise_radar.svg", 680, 340,
-                      core.radar_chart(SPOTS, series, title=title, vmax=85))
+    series = [{"name": p, "color": core.PALETTE[i],
+               "values": [grid.get((p, s), 0) for s in SPOTS]}
+              for i, p in enumerate(PERIODS)]
+    title = ("校园五点位 × 三时段噪声地图（dB，标准 15 组已完成 "
+             f"{len(standard)}/15，未采集格按 0 占位）" if len(standard) < 15
+             else "校园五点位 × 三时段噪声地图（15 组，dB）")
+    core.save_svg(RESULTS / "06_noise_radar.svg", 680, 340,
+                  core.radar_chart(SPOTS, series, title=title, vmax=85))
+
+    # 配套矩阵热力图：缺失格明确标注「未采集」，超标格红框，一眼看清完成度
+    # 行 = 时段（3 行），列 = 点位（5 列），与官网「5 点位 × 3 时段」一致
+    cells = [[grid.get((p, s)) for s in SPOTS] for p in PERIODS]
+    core.save_svg(RESULTS / "06_noise_matrix.svg", 680, 340,
+                  core.matrix_grid(PERIODS, SPOTS, cells,
+                                   limits=[LIMITS.get(p, 55.0) for p in PERIODS],
+                                   title="标准 15 组声学数据表 · 点位 × 时段矩阵",
+                                   note=f"已完成 {len(standard)}/15 格；虚线格为未采集，红框为超出时段阈值"))
+    print(f"雷达图 -> results/06_noise_radar.svg（5 点位 × 3 时段完整矩阵）")
+    print(f"矩阵热力图 -> results/06_noise_matrix.svg（{len(standard)}/15 格已采集）")
 
     # 光效逻辑状态机仿真
     fsm, t, timeline = LightAlertFSM(), 0, []
@@ -126,6 +127,21 @@ def main():
             t += 1
     trans = [e for e in fsm.events if "->" in e[1]]
     peaks = [e for e in fsm.events if e[1] == "PEAK_FLASH"]
+
+    # 状态时间线图：横轴帧序，纵轴状态等级，直观看状态机如何随声级切换
+    STATE_ORDER = ["QUIET", "NORMAL", "WARN", "ALERT"]
+    STATE_COLOR = {"QUIET": "#2f9e44", "NORMAL": "#1971c2",
+                   "WARN": "#f08c00", "ALERT": "#e5484d"}
+    series = []
+    for st in STATE_ORDER:
+        pts = [(i, STATE_ORDER.index(st)) for i, s in enumerate(timeline) if s == st]
+        if pts:
+            series.append({"name": st, "color": STATE_COLOR[st], "points": pts})
+    core.save_svg(RESULTS / "06_alert_timeline.svg", 680, 260,
+                  core.line_chart(series, title="超标提醒光效状态机 · 仿真状态时间线",
+                                  xlabel="仿真帧（1 s/帧）", ylabel="状态等级",
+                                  width=680, height=260))
+
     md = [
         "# 课题 06 · 声学超标自动提醒光效逻辑", "",
         "> 由 `analyze_noise.py` 生成，可并入本目录 README.md。", "",
@@ -142,7 +158,8 @@ def main():
         "| ALERT | 红色快闪 2 Hz + 蜂鸣 | 连续 3 帧 ≥ 阈值+6 dB |", "",
         f"- 升级确认 {fsm.UP_FRAMES} 帧、降级确认 {fsm.DOWN_FRAMES} 帧、滞回带 {fsm.HYSTERESIS} dB，防止临界抖动",
         f"- 瞬时峰值 ≥ 阈值+{fsm.PEAK_DELTA} dB 触发单次短闪，不改变主状态",
-        "- 采样周期 1 s，取滑动 60 s 等效声级；装置可用 ESP32-S3 + WS2812 灯环实现", "",
+        "- 采样周期 1 s，取滑动 60 s 等效声级；装置可用 ESP32-S3 + WS2812 灯环实现",
+        "- 状态机实现见 `analyze_noise.py` 的 `LightAlertFSM` 类，**是可运行代码而非伪代码**", "",
         "```python",
         "if peak >= limit + 10: emit(PEAK_FLASH)",
         "if leq >= limit:",
@@ -153,18 +170,20 @@ def main():
         "    if down >= 5: state = QUIET if leq < limit - 12 else NORMAL",
         "```", "",
         "## 仿真结果", "",
-        f"- 基于当前 {len(filled)} 组数据扩展为 {len(timeline)} 帧，状态切换 {len(trans)} 次，峰值短闪 {len(peaks)} 次",
-        f"- 结束状态：`{fsm.state}`（{fsm.LIGHT[fsm.state]}）", "",
+        f"- 基于当前 {len(filled)} 组真实数据扩展为 {len(timeline)} 帧，状态切换 {len(trans)} 次，峰值短闪 {len(peaks)} 次",
+        f"- 结束状态：`{fsm.state}`（{fsm.LIGHT[fsm.state]}）",
+        "- 状态时间线图见 `results/06_alert_timeline.svg`", "",
         "## 数据边界（面试预判）", "",
         "- 手机 App 非专业声级计、未做 A 计权校准：全程用同一台 OPPO Reno 15、同一持握高度与朝向，",
         "  在报告中说明系统误差；有条件时用标准声级计做一次对照。",
-        "- `H04` 最小 7 dB 为 App 启动瞬间麦克风未稳定的爬升假值，",
-        "  保留原始记录并在 `R01` 重测，不删除、不静默改数。",
+        "- `H04` 最小 7 dB、`H15` 最小 18 dB 为 App 启动瞬间麦克风未稳定的爬升假值，",
+        "  原始记录保留不删不改，平均值仍可参考，最小值不纳入统计。",
         "- 雨天 / 校园活动会抬高食堂与运动场读数，已在 CSV 的 `weather` / `note` 列预留归因字段。",
     ]
     (RESULTS / "06_alert_logic.md").write_text("\n".join(md) + "\n", encoding="utf-8")
     print(f"超标组数：{sum(1 for d in out if d['is_exceed'] == '是')} / {len(out)}")
-    print("已输出 06_summary.csv / 06_noise_bars.svg / 06_noise_radar.svg / 06_alert_logic.md")
+    print("已输出 06_summary.csv / 06_noise_bars.svg / 06_noise_radar.svg / "
+          "06_noise_matrix.svg / 06_alert_timeline.svg / 06_alert_logic.md")
     return 0
 
 
