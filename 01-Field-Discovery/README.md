@@ -1,4 +1,4 @@
-# 第一阶段 · 基础素养实地测评（课题 06 + 课题 08）
+# 01 · Field Discovery｜第一阶段实地测评（课题 06 + 课题 08）
 
 **参赛者**：王宇婷 · 2027094　**形式**：10 选 2，20 分　**要求**：提交本校实地采样的原始数据表、现场同框照片与可视化结果。
 
@@ -7,7 +7,7 @@
 | 课题 06 校园昼夜声学噪声地图测绘 | 15 组声学数据表、雷达图、声学超标自动提醒光效逻辑 | 标准 15 格全部有实测值；23 组纳入统计，11 组超时段阈值；五场所个性化四档光效 + 可运行状态机 |
 | 课题 08 多姿态步态加速度特征采集与对比 | 4 份原始 CSV 波形、可视化图、区分动作的阈值规则 | 5 组 100 Hz 三轴 CSV（楼梯分快/慢）；四类判别规则；5 张波形 + 雷达 + 混淆矩阵 |
 
-原始材料逐件说明见 [课题06/README.md](./课题06/README.md)、[课题08/README.md](./课题08/README.md)，交付逐条对照见 [课题08/交付清单.md](./课题08/交付清单.md)。
+原始材料逐件说明见 [06-acoustic/README.md](./06-acoustic/README.md)、[08-gait/README.md](./08-gait/README.md)，交付逐条对照见 [08-gait/交付清单.md](./08-gait/交付清单.md)。
 
 ---
 
@@ -25,7 +25,7 @@
 
 ### 1.2 数据登记与口径
 
-`noise_log.csv` 共 36 行：`N01–N15` 为标准格（全部填满），`H01–H20` 与 `H05L` 为 21 组实测记录。**24 组独立实测、23 组纳入统计**（15 组归入标准格、8 组为佐证）；`H04`（min 7 dB）为 App 启动爬升假值，原件保留、仅作排障样本。数据覆盖 11/04、11/05、11/13、11/18、11/19、11/20、11/23。
+`raw_data/noise_log.csv` 共 36 行：`N01–N15` 为标准格（全部填满），`H01–H20` 与 `H05L` 为 21 组实测记录。**24 组独立实测、23 组纳入统计**（15 组归入标准格、8 组为佐证）；`H04`（min 7 dB）为 App 启动爬升假值，原件保留、仅作排障样本。数据覆盖 11/04、11/05、11/13、11/18、11/19、11/20、11/23。
 
 标准格归位由 [tools/build_standard_grid.py](../tools/build_standard_grid.py) 完成，四条规则事先声明、幂等可复现：
 
@@ -68,7 +68,7 @@
 
 ![状态机仿真状态时间线](./results/06_alert_timeline.svg)
 
-结果文件与逐件说明见 [课题06/README.md](./课题06/README.md) 第 5.4 节；汇总表为 `results/06_summary.csv`（23 组纳入统计）。
+结果文件与逐件说明见 [06-acoustic/README.md](./06-acoustic/README.md) 第 5.4 节；汇总表为 `results/06_summary.csv`（23 组纳入统计）。
 
 ### 1.4 光效逻辑
 
@@ -115,7 +115,7 @@
 
 ### 2.2 数据核对
 
-依据 [课题08核对报告.html](../AI使用报告/第一阶段/课题08核对报告.html)：`|a| = √(x²+y²+z²)` 五份 CSV 逐行误差为 0，无整行重复，5 份 CSV 之间无复制粘贴。
+依据 [课题08核对报告.html](../03-AI-Collaboration/第一阶段/课题08核对报告.html)：`|a| = √(x²+y²+z²)` 五份 CSV 逐行误差为 0，无整行重复，5 份 CSV 之间无复制粘贴。
 
 | 组别 | CSV 时长 | 视频时长 | 差值 | \|a\| RMS | 峰值 | 判定 |
 |---|---:|---:|---:|---:|---:|---|
@@ -185,16 +185,16 @@ else:                           平地慢走 # 双脚交替，能量落在 2× �
 | 课题 06：15 组声学数据表 | `noise_log.csv` | 标准格 15/15 |
 | 课题 06：雷达图 | `results/06_noise_radar.svg` + `06_noise_matrix.svg` | 5×3 矩阵完整 |
 | 课题 06：超标光效逻辑 | `results/06_alert_profiles.md` + `06_alert_logic.md` + `06_alert_fsm.svg` + `LightAlertFSM` | 五套方案 + 四档状态机 + 可运行代码 |
-| 课题 06：现场照片 | `课题06/*.jpg`、`*.mp4` | 各组对应齐全 |
-| 课题 08：4 份原始 CSV 波形 | `课题08/*/` 5 组 CSV + `results/08_wave_*.svg` | 4 类齐全，快跑重采有效 |
+| 课题 06：现场照片 | `raw_data/acoustic/*.jpg`、`*.mp4` | 各组对应齐全 |
+| 课题 08：4 份原始 CSV 波形 | `raw_data/gait/*/` 5 组 CSV + `results/08_wave_*.svg` | 4 类齐全，快跑重采有效 |
 | 课题 08：可视化图 | `results/08_wave_*.svg`（5 张）、`08_radar.svg`、`08_feature_bars.svg`、`08_confusion.svg` | 齐 |
-| 课题 08：阈值规则 | `results/08_threshold_rules.md`、`课题08/交付清单.md` | 真实数据标定，88.3% / 63.3% |
-| 过程留痕 | `../process_logs/`、`../AI使用报告/` | 截图与核对报告齐 |
+| 课题 08：阈值规则 | `results/08_threshold_rules.md`、`08-gait/交付清单.md` | 真实数据标定，88.3% / 63.3% |
+| 过程留痕 | `../02-20Days-Challenge/process_logs/`、`../03-AI-Collaboration/` | 截图与核对报告齐 |
 
 ## 四、复现
 
 ```bat
 python tools\build_standard_grid.py
-python 01_Stage1_Field_Measurement\analyze_noise.py
-python 01_Stage1_Field_Measurement\analyze_gait.py
+python 01-Field-Discovery\analyze_noise.py
+python 01-Field-Discovery\analyze_gait.py
 ```

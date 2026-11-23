@@ -1,5 +1,7 @@
 # process_logs · 每日过程记录
 
+> 2026-11-23 仓库按官网建议重组，本目录由仓库根移入 `02-20Days-Challenge/`。日志正文写于当时，其中的相对路径以**当时仓库根目录**为基准，未逐条改写——保留原始写法即保留过程原貌。
+
 官网要求「跨多日连续过程数据（process_logs/）」，并以 GitHub 提交历史核验真实性。本目录每天一份，当天写、当天提交。
 
 **最后更新**：2026-11-23　**共 15 份**（11/01、11/04、11/05、11/06，11/13–11/23 连续 11 份）
@@ -36,10 +38,10 @@
 
 | 待证事项 | 证据位置 |
 |---|---|
-| 某天确实采了数据 | `01_Stage1_Field_Measurement/课题06/*.png`（报告内时间戳）、`课题08/*/meta/time.csv`（START/PAUSE 墙钟时刻） |
-| 数据与视频为同一次采集 | [`../AI使用报告/第一阶段/课题08核对报告.html`](../AI使用报告/第一阶段/课题08核对报告.html) |
+| 某天确实采了数据 | `01-Field-Discovery/raw_data/acoustic/*.png`（报告内时间戳）、`raw_data/gait/*/meta/time.csv`（START/PAUSE 墙钟时刻） |
+| 数据与视频为同一次采集 | [`../../03-AI-Collaboration/第一阶段/课题08核对报告.html`](../../03-AI-Collaboration/第一阶段/课题08核对报告.html) |
 | 某天确实改了代码或文档 | Git 提交历史、`../AI_Chat_Log.md` 事件表 |
-| 某天采了哪些工况 | `02_Stage2_Project_Vibration/experiment_log.csv`（75 行逐段登记） |
-| AI 辅助过程 | `../AI使用报告/` 三阶段截图 |
+| 某天采了哪些工况 | `02-20Days-Challenge/experiment_log.csv`（75 行逐段登记） |
+| AI 辅助过程 | `../03-AI-Collaboration/` 三阶段截图 |
 
 > 不用文件修改时间作采集时间：MP4 `creation_time` 是导出/封装时刻，文件系统 mtime 是拷贝时刻。真实采集时刻只认分贝报告内时间、`meta/time.csv`、水印相机 JPG 与画面状态栏。

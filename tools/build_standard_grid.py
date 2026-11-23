@@ -21,7 +21,7 @@ R1 时段合规：检测时刻落在本项目自定窗口内
 R2 点位合规：实测点位与官网 5 点位一一对应
              运动场 = 操场（11-18 水印核实）
              实训室走廊 = 实验室走廊（门牌「426 产业项目实训室」「425 智能制造实训室」，
-                                     与官网 426 实践工坊同址，见课题06/README.md）
+                                     与官网 426 实践工坊同址，见 01-Field-Discovery/06-acoustic/README.md）
 R3 同格多候选时：优先取 min_db 正常（≥15 dB，排除 App 启动爬升假值）者，
              仍并列则取检测时间最早者——该规则与声级高低无关，不挑好看的数。
 R4 数值一律从来源记录逐字段复制，不做任何平均、修正或再加工。
@@ -39,7 +39,7 @@ import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CSV = ROOT / "01_Stage1_Field_Measurement" / "noise_log.csv"
+CSV = ROOT / "01-Field-Discovery" / "raw_data" / "noise_log.csv"
 
 # 标准格 ← 来源实测记录。理由逐条写清，便于复核与答辩。
 GRID_RULES = {

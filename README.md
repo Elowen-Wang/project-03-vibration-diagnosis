@@ -3,8 +3,9 @@
 | | |
 |---|---|
 | 参赛者 | 王宇婷 · 学号 2027094 · 2026 级高职 人工智能 |
-| 周期 | 2026-11-01 → 2026-11-23（逐日提交，过程见 `process_logs/`） |
+| 周期 | 2026-11-01 → 2026-11-23（逐日提交，过程见 `02-20Days-Challenge/process_logs/`） |
 | 选题 | 第一阶段 课题 06 + 课题 08（10 选 2，20 分）；第二阶段 项目三（8 选 1，60 分） |
+| 目录 | 按官网建议组织：`01-Field-Discovery/`（阶段一报告与 `raw_data/`）、`02-20Days-Challenge/`（源码、`process_logs/` 与实物演进照）、`03-AI-Collaboration/`（AI 协作记录） |
 | 技术栈 | Python 3 标准库（`csv` `wave` `struct` `math` `cmath`），零第三方依赖，图表输出 SVG |
 
 ---
@@ -23,14 +24,14 @@
 
 | 内容 | 位置 |
 |---|---|
-| 第一阶段总报告 | [01_Stage1_Field_Measurement/README.md](./01_Stage1_Field_Measurement/README.md) |
-| ├ 课题 06 原始材料与数据登记 | [课题06/README.md](./01_Stage1_Field_Measurement/课题06/README.md) |
-| └ 课题 08 数据字典与逐组核对 | [课题08/README.md](./01_Stage1_Field_Measurement/课题08/README.md) · [交付清单](./01_Stage1_Field_Measurement/课题08/交付清单.md) |
-| 第二阶段项目三主报告 | [02_Stage2_Project_Vibration/README.md](./02_Stage2_Project_Vibration/README.md) |
-| 项目三配套 | [交付清单](./02_Stage2_Project_Vibration/交付清单.md) · [工况定义](./02_Stage2_Project_Vibration/protocol.md) · [实验照索引](./02_Stage2_Project_Vibration/实验照索引.md) |
-| 盲测演示 | [演示页](./02_Stage2_Project_Vibration/blind_test/盲测演示.html) · [录屏说明](./02_Stage2_Project_Vibration/blind_test/README.md) · [逐段明细](./02_Stage2_Project_Vibration/blind_test/blind_detail.csv) |
-| AI 使用记录 | [截图与核对报告](./AI使用报告/README.md) · [文字索引](./AI_Chat_Log.md) |
-| 过程日志 | [process_logs/README.md](./process_logs/README.md)（15 份） |
+| 第一阶段总报告 | [01-Field-Discovery/README.md](./01-Field-Discovery/README.md) |
+| ├ 课题 06 原始材料与数据登记 | [06-acoustic/README.md](./01-Field-Discovery/06-acoustic/README.md) |
+| └ 课题 08 数据字典与逐组核对 | [08-gait/README.md](./01-Field-Discovery/08-gait/README.md) · [交付清单](./01-Field-Discovery/08-gait/交付清单.md) |
+| 第二阶段项目三主报告 | [02-20Days-Challenge/README.md](./02-20Days-Challenge/README.md) |
+| 项目三配套 | [交付清单](./02-20Days-Challenge/交付清单.md) · [工况定义](./02-20Days-Challenge/protocol.md) · [实验照索引](./02-20Days-Challenge/实验照索引.md) |
+| 盲测演示 | [演示页](./02-20Days-Challenge/blind_test/盲测演示.html) · [录屏说明](./02-20Days-Challenge/blind_test/README.md) · [逐段明细](./02-20Days-Challenge/blind_test/blind_detail.csv) |
+| AI 使用记录 | [截图与核对报告](./03-AI-Collaboration/README.md) · [文字索引](./AI_Chat_Log.md) |
+| 过程日志 | [process_logs/README.md](./02-20Days-Challenge/process_logs/README.md)（15 份） |
 | 任务排期 / 提交操作 | [DAILY_PLAN.md](./DAILY_PLAN.md) · [提交指引.md](./提交指引.md) |
 
 ## 三、方法
@@ -47,17 +48,17 @@
 
 | 指标 | 数值 | 口径 / 出处 |
 |---|---|---|
-| 课题 06 标准格 | **15/15** | 早/午/晚 × 5 点位，每格均有实测，[`06_summary.csv`](./01_Stage1_Field_Measurement/results/06_summary.csv) |
+| 课题 06 标准格 | **15/15** | 早/午/晚 × 5 点位，每格均有实测，[`06_summary.csv`](./01-Field-Discovery/results/06_summary.csv) |
 | 课题 06 实测与超标 | 24 组实测 / 23 组纳入统计；11 组超标（食堂 3 · 主干道 6 · 实训室走廊 2） | 超时段阈值（早/午 55、晚 50 dB）；标准 15 格中 7 格超标 |
-| 课题 06 场所化光效 | 基线 41 / 60 / 60 / 50 / 47 dB；四档绿黄橙红 + 峰值单闪 | 15 格回放绿 10 · 黄 3 · 橙 1 · 红 1，[`06_alert_profiles.md`](./01_Stage1_Field_Measurement/results/06_alert_profiles.md) |
-| 课题 08 判别准确率 | K 折 **88.3%** / 留一文件 **63.3%** | 30 窗口；前者为窗口级可分性，后者近泛化，[`08_threshold_rules.md`](./01_Stage1_Field_Measurement/results/08_threshold_rules.md) |
+| 课题 06 场所化光效 | 基线 41 / 60 / 60 / 50 / 47 dB；四档绿黄橙红 + 峰值单闪 | 15 格回放绿 10 · 黄 3 · 橙 1 · 红 1，[`06_alert_profiles.md`](./01-Field-Discovery/results/06_alert_profiles.md) |
+| 课题 08 判别准确率 | K 折 **88.3%** / 留一文件 **63.3%** | 30 窗口；前者为窗口级可分性，后者近泛化，[`08_threshold_rules.md`](./01-Field-Discovery/results/08_threshold_rules.md) |
 | 项目三数据规模 | 75 段 WAV（5 工况 × 15），10.27–11.90 s | 48 kHz / 双声道 / 16 bit，75 段 MD5 互异 |
-| 项目三留一法 | **89.3%** | 75 段逐段留出，[`loo_report.md`](./02_Stage2_Project_Vibration/results/loo_report.md) |
-| 项目三盲测 | 第一轮 **80.0%**（12/15）· 第二轮 **93.3%**（14/15） | 两轮留出段互斥，[`盲测两轮对比说明.md`](./02_Stage2_Project_Vibration/results/盲测两轮对比说明.md) |
-| 项目三抗噪 | 30→0 dB：88.0→48.0%（一轮）· 96.0→48.0%（二轮） | 拐点两轮均为 5 dB，[`noise_robustness_round2.md`](./02_Stage2_Project_Vibration/results/noise_robustness_round2.md) |
-| 特征消融 | `crest` 最关键（屏蔽后 −4.0 pp），`dominant_hz` 冗余（屏蔽后 +2.7 pp） | 屏蔽重标定 + 留一法，[`feature_ablation.md`](./02_Stage2_Project_Vibration/results/feature_ablation.md) |
-| 声学通道边界 | <100 Hz 占 1.5% 能量，>5 kHz 占 56.0%；1× 转频 100–155 Hz 可观测 | 75 段原始 48 kHz 分解，[`acoustic_band_limits.md`](./02_Stage2_Project_Vibration/results/acoustic_band_limits.md) |
-| 包络解调试验 | 89.3% → 89.3%（+0.0 pp），仅包络 42.7% | 负结果，未并入主流程，[`envelope_experiment.md`](./02_Stage2_Project_Vibration/results/envelope_experiment.md) |
+| 项目三留一法 | **89.3%** | 75 段逐段留出，[`loo_report.md`](./02-20Days-Challenge/results/loo_report.md) |
+| 项目三盲测 | 第一轮 **80.0%**（12/15）· 第二轮 **93.3%**（14/15） | 两轮留出段互斥，[`盲测两轮对比说明.md`](./02-20Days-Challenge/results/盲测两轮对比说明.md) |
+| 项目三抗噪 | 30→0 dB：88.0→48.0%（一轮）· 96.0→48.0%（二轮） | 拐点两轮均为 5 dB，[`noise_robustness_round2.md`](./02-20Days-Challenge/results/noise_robustness_round2.md) |
+| 特征消融 | `crest` 最关键（屏蔽后 −4.0 pp），`dominant_hz` 冗余（屏蔽后 +2.7 pp） | 屏蔽重标定 + 留一法，[`feature_ablation.md`](./02-20Days-Challenge/results/feature_ablation.md) |
+| 声学通道边界 | <100 Hz 占 1.5% 能量，>5 kHz 占 56.0%；1× 转频 100–155 Hz 可观测 | 75 段原始 48 kHz 分解，[`acoustic_band_limits.md`](./02-20Days-Challenge/results/acoustic_band_limits.md) |
+| 包络解调试验 | 89.3% → 89.3%（+0.0 pp），仅包络 42.7% | 负结果，未并入主流程，[`envelope_experiment.md`](./02-20Days-Challenge/results/envelope_experiment.md) |
 
 **读法**：88.3% 与 63.3% 不可互换——前者衡量同一次采集内 3 s 窗口的可分性（相邻窗口高度相关，偏乐观），后者训练与测试不共享源文件。盲测两轮相差 13.3 pp，训练量相同（每工况 12 段），差异仅来自留出的 3 段不同，说明该类样本量下测试集选择本身带约 ±7 pp 波动。抗噪两轮拐点一致而绝对值相差 8–11 pp，量级大于 3 次重复加噪的随机波动（最大 σ 1.9 pp）。各项差异均写入对应报告，不以单次最优值对外表述。
 
@@ -65,59 +66,65 @@
 
 **课题 06 · 五点位 × 三时段噪声地图**（五轴为点位，三折线为时段，虚线为时段阈值）：
 
-![校园五点位 × 三时段噪声地图](./01_Stage1_Field_Measurement/results/06_noise_radar.svg)
+![校园五点位 × 三时段噪声地图](./01-Field-Discovery/results/06_noise_radar.svg)
 
 **课题 06 · 五场所个性化阈值阶梯**（每行一个场所，色带即四档区间，圆点为实测读数）：
 
-![五场所个性化阈值阶梯](./01_Stage1_Field_Measurement/results/06_alert_profiles.svg)
+![五场所个性化阈值阶梯](./01-Field-Discovery/results/06_alert_profiles.svg)
 
 **课题 08 · 步态波形**（取活动段中部 8 s，标题标注区间与源文件）：
 
-![上下楼梯（快）三轴波形](./01_Stage1_Field_Measurement/results/08_wave_上下楼梯_快.svg)
+![上下楼梯（快）三轴波形](./01-Field-Discovery/results/08_wave_上下楼梯_快.svg)
 
 **项目三 · 五工况平均幅度谱**：
 
-![五工况平均幅度谱](./02_Stage2_Project_Vibration/results/spectrum_compare.svg)
+![五工况平均幅度谱](./02-20Days-Challenge/results/spectrum_compare.svg)
 
 **项目三 · 声学通道能量频带分布**（低频缺失的直接证据，支撑第四章的边界结论）：
 
-![五工况能量频带分布](./02_Stage2_Project_Vibration/results/acoustic_band_limits.svg)
+![五工况能量频带分布](./02-20Days-Challenge/results/acoustic_band_limits.svg)
 
 ## 六、仓库结构
 
 ```
 project-03-vibration-diagnosis/
 ├── README.md · DAILY_PLAN.md · AI_Chat_Log.md · 提交指引.md
-├── AI使用报告/                  三阶段对话截图 + 课题08核对报告.html
-├── process_logs/                15 份逐日日志 + 索引
-├── tools/                       signal_core.py（FFT/绘图/分类内核）· build_standard_grid.py
-│                                normalize_text.py · make_templates.py · make_blind_demo.py
-├── 01_Stage1_Field_Measurement/
-│   ├── README.md · noise_log.csv · analyze_noise.py · analyze_gait.py
-│   ├── 课题06/                  24 份分贝报告 + 现场 JPG/MP4
-│   ├── 课题08/                  5 组 CSV/MP4/meta
-│   └── results/                 06_*（含五场所方案）· 08_* 图表与报告 · archive_1116/ 迭代备份
-└── 02_Stage2_Project_Vibration/
-    ├── README.md · protocol.md · experiment_log.csv · 交付清单.md · 实验照索引.md
-    ├── analyze_real_wav.py · analyze_acoustic_limits.py
-    ├── low-15/ · high-15/ · friction-15/ · block-15/ · imbalance-15/   75 段 WAV
-    ├── blind_test/               演示页 + 录屏说明 + 逐段明细 + 视频
-    └── results/                  特征表 / 频谱 / 留一法 / 盲测 / 抗噪 / 消融 / 频带边界 / 包络试验
+├── 01-Field-Discovery/                    阶段一 · 实地测评（课题 06 + 课题 08）
+│   ├── README.md                          阶段一总报告
+│   ├── raw_data/                          原始件：不改名、不裁剪、不删
+│   │   ├── noise_log.csv                  N01–N15 标准格 + H01–H20 / H05L 登记
+│   │   ├── acoustic/                      分贝报告 PNG + 现场 JPG/MP4（73 件）
+│   │   └── gait/                          5 组姿态 CSV + meta（20 件）
+│   ├── 06-acoustic/README.md              课题 06 材料登记、逐张核对、15 格归位
+│   ├── 08-gait/                           README.md · 交付清单.md
+│   ├── results/                           06_* 图表与光效方案 · 08_* 波形与阈值 · archive_1116/
+│   └── analyze_noise.py · analyze_gait.py
+├── 02-20Days-Challenge/                   20 天挑战 · 项目三（源码 + 原始数据 + 过程）
+│   ├── README.md · protocol.md · 交付清单.md · 实验照索引.md · experiment_log.csv
+│   ├── analyze_real_wav.py · analyze_acoustic_limits.py
+│   ├── low-15/ · high-15/ · friction-15/ · block-15/ · imbalance-15/   75 段 WAV
+│   ├── photos/                            day1/day2 设备照 · 三份分贝报告 · 三段现场视频
+│   ├── blind_test/                        演示页 + 录屏说明 + 逐段明细 + 视频
+│   ├── process_logs/                      15 份逐日日志 + 索引
+│   └── results/                           特征表 / 频谱 / 留一法 / 盲测 / 抗噪 / 消融 / 频带边界 / 包络试验
+├── 03-AI-Collaboration/                   三阶段对话截图 + 课题 08 核对报告
+└── tools/                                 signal_core.py（FFT/绘图/分类内核）· build_standard_grid.py
+                                           normalize_text.py · make_templates.py · make_blind_demo.py
 ```
 
 ## 七、评分项对照
 
-**第二阶段（60 分）**，逐条见[项目三交付清单](./02_Stage2_Project_Vibration/交付清单.md)：
+**第二阶段（60 分）**，逐条见[项目三交付清单](./02-20Days-Challenge/交付清单.md)：
 
 | 官网要求 | 对应内容 | 状态 |
 |---|---|---|
-| ① 5 工况 × 15 组原始 WAV/CSV 及实验照（20 分） | `*-15/` 75 段 WAV、`experiment_log.csv`、`day*.jpg`、`*.png`、`*.mp4`、`实验照索引.md` | 数据齐全；摩擦/失衡为道具照，无动作瞬间同框（已标注） |
-| ② 时域/频域特征提取代码（20 分） | `02_Stage2_Project_Vibration/analyze_real_wav.py`、`tools/signal_core.py`、`results/features.csv`、`results/spectrum_compare.svg` | 75 段跑通 |
-| ③ 盲测准确率视频与抗噪报告（20 分） | `02_Stage2_Project_Vibration/blind_test/`、`results/loo_report.md`、`blind_report*.md`、`noise_robustness*.md`、`feature_ablation.md` | 视频（第一轮实时录屏）+ 两轮盲测 + 两轮抗噪 + 消融 |
-| 跨多日过程数据 | `process_logs/` 15 份、Git 提交历史、`AI使用报告/` | 齐（含 3 天空白模板，未补写） |
-| AI 协作记录 | `AI使用报告/` 截图 + 核对报告 + `AI_Chat_Log.md` | 齐 |
+| ① 5 工况 × 15 组原始 WAV/CSV 及实验照（20 分） | `*-15/` 75 段 WAV、`experiment_log.csv`、`photos/`（day1/day2 设备照 · 三份分贝报告 · 三段现场视频）、`实验照索引.md` | 数据齐全；摩擦/失衡为道具照，无动作瞬间同框（已标注） |
+| ② 时域/频域特征提取代码（20 分） | `02-20Days-Challenge/analyze_real_wav.py`、`tools/signal_core.py`、`results/features.csv`、`results/spectrum_compare.svg` | 75 段跑通 |
+| ③ 盲测准确率视频与抗噪报告（20 分） | `02-20Days-Challenge/blind_test/`、`results/loo_report.md`、`blind_report*.md`、`noise_robustness*.md`、`feature_ablation.md` | 视频（第一轮实时录屏）+ 两轮盲测 + 两轮抗噪 + 消融 |
+| 跨多日过程数据 | `02-20Days-Challenge/process_logs/` 15 份、Git 提交历史、`03-AI-Collaboration/` | 齐（含 3 天空白模板，未补写） |
+| AI 协作记录 | `03-AI-Collaboration/` 截图 + 核对报告 + `AI_Chat_Log.md` | 齐 |
 
-**第一阶段（20 分）**：`noise_log.csv`（标准格 15/15 + 8 组佐证）、`results/06_*`、`课题08/` 5 组 CSV、`results/08_*`；逐条见[课题 08 交付清单](./01_Stage1_Field_Measurement/课题08/交付清单.md)。
+**第一阶段（20 分）**：`01-Field-Discovery/raw_data/noise_log.csv`（标准格 15/15 + 8 组佐证）、`01-Field-Discovery/results/06_*`、`01-Field-Discovery/raw_data/gait/` 5 组 CSV、`01-Field-Discovery/results/08_*`；逐条见[课题 08 交付清单](./01-Field-Discovery/08-gait/交付清单.md)。
 
 ## 八、数据口径与边界
 
@@ -143,7 +150,7 @@ project-03-vibration-diagnosis/
 3. 课题 08 每类仅 1 次采集（快跑为 11/19 重采版），无法估计类内波动，是 K 折与留一文件差距大的直接原因。
 4. 手机 App 非专业声级计，未做 A 计权校准，读数仅用于同机相对比较。
 
-**AI 使用**：按官网要求允许并鼓励，记录见 `AI使用报告/` 与 `AI_Chat_Log.md`；数据采集、结论判断与代码核对均由本人完成。
+**AI 使用**：按官网要求允许并鼓励，记录见 `03-AI-Collaboration/` 与 `AI_Chat_Log.md`；数据采集、结论判断与代码核对均由本人完成。
 
 ## 九、进度记录
 
@@ -174,13 +181,13 @@ project-03-vibration-diagnosis/
 ```bat
 python tools\signal_core.py                  :: 内核自检
 python tools\build_standard_grid.py          :: 标准 15 格归位（幂等）
-python 01_Stage1_Field_Measurement\analyze_noise.py
-python 01_Stage1_Field_Measurement\analyze_gait.py
-python 02_Stage2_Project_Vibration\analyze_real_wav.py --all
-python 02_Stage2_Project_Vibration\analyze_real_wav.py --blind2 --noise2
-python 02_Stage2_Project_Vibration\analyze_acoustic_limits.py --all
+python 01-Field-Discovery\analyze_noise.py
+python 01-Field-Discovery\analyze_gait.py
+python 02-20Days-Challenge\analyze_real_wav.py --all
+python 02-20Days-Challenge\analyze_real_wav.py --blind2 --noise2
+python 02-20Days-Challenge\analyze_acoustic_limits.py --all
 python tools\make_blind_demo.py
-python 02_Stage2_Project_Vibration\analyze_real_wav.py --check
+python 02-20Days-Challenge\analyze_real_wav.py --check
 python tools\normalize_text.py
 ```
 

@@ -7,7 +7,7 @@
 | 采集日期 | 11-04、11-05、11-13、11-18、11-19、11-20、11-23 |
 | 项目起点 | 11-01（项目三目录测低速/高速/受阻三份报告，见第三节） |
 
-登记约定：`noise_log.csv` 的 `photo` / `report_png` 两列统一写 `课题06/xxx` 相对路径；报告时间以 App「检测时间」为准，已逐张与现场水印核对；文件保留原始导出名，未改名。
+登记约定：`raw_data/noise_log.csv` 的 `photo` / `report_png` 两列统一写 `raw_data/acoustic/xxx`（相对 `01-Field-Discovery/`）；报告时间以 App「检测时间」为准，已逐张与现场水印核对；文件保留原始导出名，未改名。
 
 ---
 
@@ -102,17 +102,17 @@ App 自动生成的场景描述（食堂写「汽车穿梭在马路上」、干�
 
 | 报告文件 | 检测时间 | 最小 | 最大 | 平均 | 曲线时长 |
 |---|---|---:|---:|---:|---:|
-| `02_Stage2_Project_Vibration/低速.png` | 11/01 16:49 | 47 | 58 | **52** | 19 s |
-| `02_Stage2_Project_Vibration/高速.png` | 11/01 16:50 | 43 | 62 | **57** | 38 s |
-| `02_Stage2_Project_Vibration/受阻.png` | 11/01 16:55 | 44 | 72 | **61** | 38 s |
+| `02-20Days-Challenge/photos/低速.png` | 11/01 16:49 | 47 | 58 | **52** | 19 s |
+| `02-20Days-Challenge/photos/高速.png` | 11/01 16:50 | 43 | 62 | **57** | 38 s |
+| `02-20Days-Challenge/photos/受阻.png` | 11/01 16:55 | 44 | 72 | **61** | 38 s |
 
-三份检测地点均在「将军帽路1号深圳技师学院西北约 252–254 米」，时间相隔 1 / 5 分钟，属同一次连续测量。平均声级 52 → 57 → 61 dB 随工况递增，与转速及进风受阻的物理预期一致，独立于 FFT 分类。当日记录见 [process_logs/2026-11-01.md](../../process_logs/2026-11-01.md)。
+三份检测地点均在「将军帽路1号深圳技师学院西北约 252–254 米」，时间相隔 1 / 5 分钟，属同一次连续测量。平均声级 52 → 57 → 61 dB 随工况递增，与转速及进风受阻的物理预期一致，独立于 FFT 分类。当日记录见 [process_logs/2026-11-01.md](../../02-20Days-Challenge/process_logs/2026-11-01.md)。
 
 ---
 
 ## 四、标准 15 格归位
 
-`../noise_log.csv` 中 `N01–N15` 为标准格（全部有实测值），`H01–H20` 与 `H05L` 为 21 组实测记录（12 组归入标准格，9 组作佐证或排障样本）。归位由 [tools/build_standard_grid.py](../../tools/build_standard_grid.py) 完成，四条规则：
+`../raw_data/noise_log.csv` 中 `N01–N15` 为标准格（全部有实测值），`H01–H20` 与 `H05L` 为 21 组实测记录（12 组归入标准格，9 组作佐证或排障样本）。归位由 [tools/build_standard_grid.py](../../tools/build_standard_grid.py) 完成，四条规则：
 
 | 规则 | 内容 |
 |---|---|
@@ -143,7 +143,7 @@ App 自动生成的场景描述（食堂写「汽车穿梭在马路上」、干�
 - H08（17:10）、H16（17:58）文件名标「晚」，检测时刻未达 20:00–22:00，只作佐证。
 - 主干道校内/校外为同一点位的两个位置，按 R1 取一份入格，另一份留佐证。
 
-自检：`python 02_Stage2_Project_Vibration\analyze_real_wav.py --check` 报「标准 15 组 15/15」。
+自检：`python 02-20Days-Challenge\analyze_real_wav.py --check` 报「标准 15 组 15/15」。
 
 ---
 
@@ -184,7 +184,7 @@ App 自动生成的场景描述（食堂写「汽车穿梭在马路上」、干�
 ```bat
 cd /d C:\Users\wangy\Desktop\project-03-vibration-diagnosis
 python tools\build_standard_grid.py                    :: 归位标准 15 格（幂等）
-python 01_Stage1_Field_Measurement\analyze_noise.py    :: 出图 + 光效逻辑
+python 01-Field-Discovery\analyze_noise.py    :: 出图 + 光效逻辑
 ```
 
 | 文件 | 内容 |

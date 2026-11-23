@@ -1,5 +1,7 @@
 # 11/13 → 11/20 每日任务表（大一零基础版）
 
+> 本文写于 11/13 立项当天。2026-11-23 仓库按官网建议重组，目录改为 `01-Field-Discovery/`、`02-20Days-Challenge/`、`03-AI-Collaboration/`；下表沿用当时写法，作为排期原貌保留。
+
 > **目标**：11 月 20 日（周五）晚 22:00 前，把三个选题的材料全部交齐并推送到 GitHub。
 > 官网封仓日是 **11/24**，11/20 完成能留 4 天缓冲，用来应对补测、改错和面试准备。
 >
@@ -97,7 +99,7 @@
    但「快跑」组经核对判定无效待重采，且每类目前只有 1 次。详见第 2.5 节。
 3. `fft_feature_extraction.py` 跑的是**模拟的正弦波**，不是你的真实 WAV → 必须换成真分析，否则面试"项目真实性溯源"直接被问穿。
 4. 项目三缺：加速度计信号、盲测准确率、抗噪报告、5 工况可复现定义、跨日 `process_logs/`、`experiment_log.csv`。
-5. 4 个 README 里 `01_Stage1_Field_Measurement/README.md` 和 `AI_Chat_Log.md` 基本是空的，阶段二 README 里 D3 日志标题层级错乱、末尾有半截 `- `。
+5. 4 个 README 里 `01-Field-Discovery/README.md` 和 `AI_Chat_Log.md` 基本是空的，阶段二 README 里 D3 日志标题层级错乱、末尾有半截 `- `。
 
 ---
 
@@ -111,7 +113,7 @@
 | Day 2 采课题 08 的 12 份 CSV | **11/16 采到 5 组**，但每组只有 1 次、且方向与命名和原计划不同；多采了「爬楼梯快」，「快跑」判定无效 |
 | Day 3 出课题 08 图表与阈值规则 | ✅ 已出（真实数据，37 窗口，留出集 50.0%），但只有 3 类有效 |
 | Day 4 项目三 WAV 特征提取 | ✅ 11/13 已由配套脚本跑通，本日未重跑；`protocol.md` 的具体参数空格**仍没填** |
-| — | ✅ 新增 `AI使用报告/` 三阶段截图 + `课题08核对报告.html`，主动查出快跑组无效 |
+| — | ✅ 新增 `03-AI-Collaboration/` 三阶段截图 + `课题08核对报告.html`，主动查出快跑组无效 |
 
 **没变的硬缺口**：课题 06 标准 15 组、快跑重采、项目三加速度通道、11/18 当天 held-out 15 段、5 段盲测视频、逐日日志、AI 文字索引逐条原文。
 
@@ -119,10 +121,10 @@
 
 | 日期 | 必须到场采集（优先） | 电脑前工作 | 当天交付 |
 |---|---|---|---|
-| **11/17 Day 5** | ① **重采快跑**：Phyphox `Acceleration (without g)`，连续 ≥12 s，中途**不暂停**，每类补到 3 次；② 项目三加速度：手机贴风扇底座，5 工况 × 3 段，导出 CSV 到 `accel_raw/` | 跑 `python 01_Stage1_Field_Measurement\analyze_gait.py`（重采后应自动恢复 4 类）；跑 `--accel`；把 `protocol.md` 的档位/配重/遮挡面积空格填具体 | 完整 4 类阈值规则 + `accel_features.csv` + 当天日志 + 1 次 commit |
+| **11/17 Day 5** | ① **重采快跑**：Phyphox `Acceleration (without g)`，连续 ≥12 s，中途**不暂停**，每类补到 3 次；② 项目三加速度：手机贴风扇底座，5 工况 × 3 段，导出 CSV 到 `accel_raw/` | 跑 `python 01-Field-Discovery\analyze_gait.py`（重采后应自动恢复 4 类）；跑 `--accel`；把 `protocol.md` 的档位/配重/遮挡面积空格填具体 | 完整 4 类阈值规则 + `accel_features.csv` + 当天日志 + 1 次 commit |
 | **11/18 Day 6** | ③ **当天新采 held-out 15 段**（OPPO 原生录音机，5 工况 × 3 段，存 `blind_test/`）+ 1 张带时间水印现场照；④ 录 5 段盲测视频（摆风扇 → 跑命令 → 念「真实 X，预测 Y」） | 跑 `--heldout`；重跑 `--noise` 写归因：哪两个工况最易混、为什么、工程上怎么补救 | `heldout_report.md`、5 段 MP4、抗噪结论、当天日志 |
 | **11/19 Day 7** | ⑤ 课题 06 补测：按 `noise_log.csv` 的 N01–N15 走 5 点位 × 3 时段（时间不够就先补早/晚各一轮，缺的如实写局限）+ 重测 R01 | 补 `AI_Chat_Log.md` 逐条原文并关联截图编号；全部 README 定稿；进度看板打勾 | 文字材料齐、AI 索引齐、当天日志 |
-| **11/20 Day 8** | — | `python 02_Stage2_Project_Vibration\analyze_real_wav.py --check`；对照评分表逐项打勾；12 分钟面试 6 题演练；检查 GitHub 网页；最终 push | 全部交付、收官日志 |
+| **11/20 Day 8** | — | `python 02-20Days-Challenge\analyze_real_wav.py --check`；对照评分表逐项打勾；12 分钟面试 6 题演练；检查 GitHub 网页；最终 push | 全部交付、收官日志 |
 
 ### 三条必须守住的原则
 
@@ -152,7 +154,7 @@
 | 5 min | 验证脚本能跑 | 命令提示符 `cd /d C:\Users\wangy\Desktop\project-03-vibration-diagnosis`，再输 `python tools\signal_core.py` | 打印 FFT 自检结果，不报错 |
 | 60 min | **课题06 午间 5 组补测**（11:30–13:00） | 打开分贝仪 App，按 `noise_log.csv` 里第 6–10 行的点位依次走：图书馆 → 食堂 → 主干道 → 运动场 → 实训室走廊。每处测 30–60 秒、截图报告 PNG、拍一张**手机与现场同框**的 JPG | 5 份 PNG + 5 张 JPG，文件名按 `11-13午-点位.png` |
 | 60 min | **课题06 晚间 5 组补测**（20:00–21:00） | 同样 5 个点位再来一轮 | 5 份 PNG + 5 张 JPG |
-| 20 min | 录入数值 | 把每张 PNG 的最小/最大/平均分贝、时间、地点抄进 `01_Stage1_Field_Measurement/noise_log.csv` | CSV 前 14 行有数字 |
+| 20 min | 录入数值 | 把每张 PNG 的最小/最大/平均分贝、时间、地点抄进 `01-Field-Discovery/raw_data/noise_log.csv` | CSV 前 14 行有数字 |
 | 15 min | 写当天 README | 填 `process_logs/2026-11-13.md`，把"Phyphox 商店搜不到 → 官网 APK 装成功"记进踩坑栏 | 文件里今日目标/完成项/踩坑三栏都填了 |
 | 5 min | 提交 | GitHub Desktop 左侧勾选改动，底部 Summary 写 `2026-11-13 补测课题06午晚共10组，录入分贝报告`，点 `Commit to main`，再点 `Push origin` | GitHub 网页上能看到新文件 |
 
@@ -168,9 +170,9 @@
 |---|---|---|---|
 | 60 min | **课题06 早间 5 组**（07:30–09:00） | 5 个点位各测一轮；顺手**重测 11-05 那组异常值**，文件名 `11-14重测-图书馆一楼.png` | 15 组数据齐，异常组有重测对照 |
 | 10 min | 补齐 CSV | 把最后 5 行 + 重测行填进 `noise_log.csv` | 表格 15 行标准组 + 1 行备注 |
-| 20 min | 跑课题06 分析 | 命令：`python 01_Stage1_Field_Measurement\analyze_noise.py` | `results/` 下生成雷达图、柱状图、汇总 CSV、光效逻辑 md |
+| 20 min | 跑课题06 分析 | 命令：`python 01-Field-Discovery\analyze_noise.py` | `results/` 下生成雷达图、柱状图、汇总 CSV、光效逻辑 md |
 | 30 min | 熟悉 Phyphox | 打开 → `Accelerometer` → 试录 10 秒 → `⋮ → Export data → CSV` → 传到电脑看表头 | 拿到一个含 `Time (s) / x / y / z` 的 CSV |
-| 90 min | **课题08 采集** | 手机**固定在同一位置**（口袋/手持/臂包，写清楚），4 种姿态各做 **3 次、每次 ≥ 12 秒**：① 静止 ② 平地慢走 ③ 快跑 ④ 上下楼梯。每次单独导出一个 CSV，命名 `gait_<姿态>_<序号>.csv`，放进 `01_Stage1_Field_Measurement/gait_raw/` | 12 个 CSV，每个 ≥ 12 秒数据 |
+| 90 min | **课题08 采集** | 手机**固定在同一位置**（口袋/手持/臂包，写清楚），4 种姿态各做 **3 次、每次 ≥ 12 秒**：① 静止 ② 平地慢走 ③ 快跑 ④ 上下楼梯。每次单独导出一个 CSV，命名 `gait_<姿态>_<序号>.csv`，放进 `01-Field-Discovery/gait_raw/` | 12 个 CSV，每个 ≥ 12 秒数据 |
 | 20 min | 拍过程照 | 每种姿态拍 1 张现场照（体现是你本人、真实环境） | 4 张 JPG |
 | 15 min | 写当天 README | 填 `process_logs/2026-11-14.md`，重点记"手机放在哪、采样率设多少、为什么做 3 次" | 三栏填完 |
 | 5 min | 提交 | Summary：`2026-11-14 课题06补齐15组并出图，课题08完成12份步态采集` | commit 可见 |
@@ -186,10 +188,10 @@
 
 | 时间 | 做什么 | 具体怎么点 | 验收 |
 |---|---|---|---|
-| 30 min | 课题08 分析 | `python 01_Stage1_Field_Measurement\analyze_gait.py` | 生成 4 张波形 SVG、特征表、混淆矩阵、阈值规则 md |
+| 30 min | 课题08 分析 | `python 01-Field-Discovery\analyze_gait.py` | 生成 4 张波形 SVG、特征表、混淆矩阵、阈值规则 md |
 | 30 min | 读懂结果 | 打开 `results/08_threshold_rules.md`，把 4 个姿态的"合加速度均值 / 主频 / 垂直幅度"抄进自己的笔记本 | 能用一句话说清"怎么区分慢走和上下楼梯" |
-| 40 min | 写 `01_Stage1_Field_Measurement/README.md` | 按我给你的补完版核对：补上 15 组数据表、雷达图引用、7 dB 异常归因、光效状态机、4 姿态波形、阈值规则、面试预判 | README 里每个 `⬜` 都变成 `✅` |
-| 20 min | 主 README 更新 | 把进度表"课题06/课题08"两行打勾 | 表格更新 |
+| 40 min | 写 `01-Field-Discovery/README.md` | 按我给你的补完版核对：补上 15 组数据表、雷达图引用、7 dB 异常归因、光效状态机、4 姿态波形、阈值规则、面试预判 | README 里每个 `⬜` 都变成 `✅` |
+| 20 min | 主 README 更新 | 把进度表"raw_data/acoustic/课题08"两行打勾 | 表格更新 |
 | 15 min | 写当天 README | `process_logs/2026-11-15.md`，记下阈值调了几次、为什么 | 三栏填完 |
 | 5 min | 提交 | Summary：`2026-11-15 阶段一两课题报告定稿，含异常值归因与阈值验证` | commit 可见 |
 
@@ -203,7 +205,7 @@
 | 时间 | 做什么 | 具体怎么点 | 验收 |
 |---|---|---|---|
 | 10 min | 看清新旧脚本区别 | 打开 `fft_feature_extraction.py`，它第 16 行是自己 `np.sin` 造的假数据；`analyze_real_wav.py` 才是读你真实 WAV 的 | 能说出区别 |
-| 20 min | **跑真分析** | 命令：`python 02_Stage2_Project_Vibration\analyze_real_wav.py --extract`（第一次跑约 1–3 分钟） | 终端逐行打印 75 个文件；`results/features.csv` 有 75 行 |
+| 20 min | **跑真分析** | 命令：`python 02-20Days-Challenge\analyze_real_wav.py --extract`（第一次跑约 1–3 分钟） | 终端逐行打印 75 个文件；`results/features.csv` 有 75 行 |
 | 20 min | 检查特征表 | 用 VS Code 打开 `results/features.csv`，确认 5 个工况的主频有明显差别 | 能说出 low 和 high 的主频大约差多少 |
 | 30 min | 写 `protocol.md`（5 工况可复现定义） | 按我给的模板，把每种工况**怎么造出来**写具体：风扇档位、失衡贴片质量与位置、遮挡面积、摩擦方式、手机距离 3–5 cm、朝向、固定方式 | 别人照着能复现 |
 | 30 min | **补写历史 process_logs** | 新建并回填 `process_logs/2026-11-01.md`、`11-04.md`、`11-05.md`、`11-06.md`。依据：已有的分贝报告时间戳、照片、Git 提交历史。**照实写，注明"事后补记"**，不要编造 | 4 个文件，内容与现有证据对得上 |
@@ -220,11 +222,11 @@
 
 | 时间 | 做什么 | 具体怎么点 | 验收 |
 |---|---|---|---|
-| 20 min | 跑留一法分类 | `python 02_Stage2_Project_Vibration\analyze_real_wav.py --classify` | 终端打印总体准确率 + 每类召回；`results/confusion.svg` 生成 |
+| 20 min | 跑留一法分类 | `python 02-20Days-Challenge\analyze_real_wav.py --classify` | 终端打印总体准确率 + 每类召回；`results/confusion.svg` 生成 |
 | 30 min | 划分训练/盲测 | 约定：**每工况 1–12 号训练，13–15 号盲测**（在 README 写死这个规则）。跑 `--blind` | `results/blind_report.md` 有准确率数字 |
-| 60 min | **补采加速度计信号**（官网点名要"麦克风 + 加速度计"） | Phyphox `Accelerometer`，手机贴风扇底座固定；5 工况各录 3 段 ≥ 10 秒，导出 CSV 到 `02_Stage2_Project_Vibration/accel_raw/`（新建），拍 1 张手机固定方式照片 | 15 个 CSV + 1 张照片 |
+| 60 min | **补采加速度计信号**（官网点名要"麦克风 + 加速度计"） | Phyphox `Accelerometer`，手机贴风扇底座固定；5 工况各录 3 段 ≥ 10 秒，导出 CSV 到 `02-20Days-Challenge/accel_raw/`（新建），拍 1 张手机固定方式照片 | 15 个 CSV + 1 张照片 |
 | 20 min | 加速度特征 | 跑 `--accel`，把 15 份 CSV 的振动 RMS / 主频并进特征表 | `results/accel_features.csv` |
-| 20 min | 更新阶段二 README | 把准确率、混淆矩阵、声振双通道说明写进 `02_Stage2_Project_Vibration/README.md` | README 有真实数字 |
+| 20 min | 更新阶段二 README | 把准确率、混淆矩阵、声振双通道说明写进 `02-20Days-Challenge/README.md` | README 有真实数字 |
 | 15 min | 写当天 README | `process_logs/2026-11-17.md`，记下"分类器第一次准确率多少、调了什么才提升" | 三栏填完 |
 | 5 min | 提交 | Summary：`2026-11-17 完成声振双通道特征、留一法分类与13-15号盲测` | commit 可见 |
 
@@ -267,7 +269,7 @@
 
 | 时间 | 做什么 | 验收 |
 |---|---|---|
-| 30 min | 跑仓库自检：`python 02_Stage2_Project_Vibration\analyze_real_wav.py --check` | 终端输出"75 段 WAV / 15 组噪声 / 12 份步态 / 8 份日志"齐备，无 MISSING |
+| 30 min | 跑仓库自检：`python 02-20Days-Challenge\analyze_real_wav.py --check` | 终端输出"75 段 WAV / 15 组噪声 / 12 份步态 / 8 份日志"齐备，无 MISSING |
 | 30 min | 对照主 README 的《官网评分对照表》逐项打勾，缺哪补哪 | 20+20+20 = 60 分三项全部有对应文件 |
 | 40 min | **12 分钟面试自问自答**（录音或对着镜子说）：<br>① 7 dB 异常值怎么发现的、怎么处理？<br>② MP3 转 WAV 有没有"恢复"高频？<br>③ 盲测集为什么非要 11/18 当天重录？<br>④ 低电量共振那个反直觉现象，你的排除过程是什么？<br>⑤ 如果预算减半 / 现场很吵，你的方案怎么改？<br>⑥ 加速度通道没采到（如果确实没采到），你怎么如实说明？ | 每题能讲 90 秒，有数据、有归因、有边界 |
 | 20 min | 检查 GitHub 网页：所有文件可见、图片能显示、README 排版正常 | 手机浏览器打开仓库页确认 |
@@ -284,9 +286,9 @@
 
 ```bat
 cd /d C:\Users\wangy\Desktop\project-03-vibration-diagnosis
-python 01_Stage1_Field_Measurement\analyze_noise.py
-python 01_Stage1_Field_Measurement\analyze_gait.py
-python 02_Stage2_Project_Vibration\analyze_real_wav.py --all
+python 01-Field-Discovery\analyze_noise.py
+python 01-Field-Discovery\analyze_gait.py
+python 02-20Days-Challenge\analyze_real_wav.py --all
 ```
 
 `--all` 会一次性跑完 extract / classify / blind / noise / heldout / check 并生成全部图表。
@@ -294,9 +296,9 @@ python 02_Stage2_Project_Vibration\analyze_real_wav.py --all
 
 课题 08 的三个命令（**注意默认读真实数据**）：
 ```bat
-python 01_Stage1_Field_Measurement\analyze_gait.py                    :: 正式：读 课题08/ 真实 CSV
-python 01_Stage1_Field_Measurement\analyze_gait.py --demo              :: 演示：合成数据只写系统临时目录
-python 01_Stage1_Field_Measurement\analyze_gait.py --include-invalid   :: 临时把无效的快跑组纳入对比
+python 01-Field-Discovery\analyze_gait.py                    :: 正式：读 raw_data/gait/ 真实 CSV
+python 01-Field-Discovery\analyze_gait.py --demo              :: 演示：合成数据只写系统临时目录
+python 01-Field-Discovery\analyze_gait.py --include-invalid   :: 临时把无效的快跑组纳入对比
 ```
 `--demo` 的产物已隔离，**不会覆盖真实结论**，但也**绝不能写进报告**。终端若打印「依据核对报告排除无效组」是正常提示，不是报错。
 
@@ -308,7 +310,7 @@ python 01_Stage1_Field_Measurement\analyze_gait.py --include-invalid   :: 临时
 | `ModuleNotFoundError: No module named 'numpy'` | 在跑旧的演示脚本 | 改跑 `analyze_real_wav.py`，它零依赖 |
 | `FileNotFoundError: ...wav` | 没在仓库根目录执行 | 先敲上面第一行 `cd /d ...` |
 | 中文路径乱码 / 找不到文件 | 命令提示符编码 | 输 `chcp 65001` 回车再跑 |
-| 步态分析「读不到 CSV」或 0 个窗口 | 数据放进了 `课题08/<姿态>/` 而不是早期的 `gait_raw/` | 脚本已自动支持新目录；确认每个姿态目录下**有直属 CSV**，`meta/` 单独放子目录 |
+| 步态分析「读不到 CSV」或 0 个窗口 | 数据放进了 `raw_data/gait/<姿态>/` 而不是早期的 `gait_raw/` | 脚本已自动支持新目录；确认每个姿态目录下**有直属 CSV**，`meta/` 单独放子目录 |
 | 特征数值看起来特别小 / 阈值对不上 | 把 `Linear Acceleration (m/s^2)` 当成含重力的 g，又除了一次 9.81 | 用 `Acceleration (without g)` 导出的就已去重力，别再换算；脚本会自动判断 |
 | 终端打印「排除无效组：快跑」 | 核对报告判定该组没录到有效动作 | 正常提示。重采前是 3 类流程验证，不是最终 4 类结论 |
 | GitHub Desktop 推送失败 | 网络或登录态 | 点 `Repository → Push` 重试；仍失败用网页版直接上传文件 |

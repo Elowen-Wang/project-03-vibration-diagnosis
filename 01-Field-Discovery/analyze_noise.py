@@ -1,9 +1,9 @@
 """课题 06 · 校园昼夜声学噪声地图测绘（零第三方依赖）
 
 用法（仓库根目录执行）：
-    python 01_Stage1_Field_Measurement\\analyze_noise.py
+    python 01-Field-Discovery\\analyze_noise.py
 
-读取 noise_log.csv，输出雷达图、柱状图、汇总表与超标光效逻辑。
+读取 raw_data/noise_log.csv，输出雷达图、柱状图、汇总表与超标光效逻辑。
 只有部分数据时也能跑，会提示还缺几组；填满 15 组后图表自动完整。
 """
 from __future__ import annotations
@@ -18,7 +18,7 @@ import signal_core as core  # noqa: E402
 
 RESULTS = HERE / "results"
 RESULTS.mkdir(exist_ok=True)
-CSV = HERE / "noise_log.csv"
+CSV = HERE / "raw_data" / "noise_log.csv"
 
 SPOTS = ["图书馆", "食堂", "主干道", "运动场", "实训室走廊"]
 PERIODS = ["早", "午", "晚"]

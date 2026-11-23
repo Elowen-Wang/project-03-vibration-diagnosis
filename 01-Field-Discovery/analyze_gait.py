@@ -1,11 +1,11 @@
 """课题 08 · 多姿态步态加速度特征采集与对比（零第三方依赖）
 
 用法（仓库根目录执行）：
-    python 01_Stage1_Field_Measurement\\analyze_gait.py --demo   # 合成演示数据，仅验证流程
-    python 01_Stage1_Field_Measurement\\analyze_gait.py           # 分析 课题08/ 下的真实 CSV
-    python 01_Stage1_Field_Measurement\\analyze_gait.py --include-invalid  # 临时纳入无效组对比
+    python 01-Field-Discovery\\analyze_gait.py --demo   # 合成演示数据，仅验证流程
+    python 01-Field-Discovery\\analyze_gait.py           # 分析 raw_data/gait/ 下的真实 CSV
+    python 01-Field-Discovery\\analyze_gait.py --include-invalid  # 临时纳入无效组对比
 
-数据源优先级：gait_raw/（早期扁平目录）→ 课题08/<姿态>/*.csv（2026-11-16 实际采集）。
+数据源优先级：gait_raw/（早期扁平目录）→ raw_data/gait/<姿态>/*.csv（2026-11-16 实际采集）。
 自动识别 Phyphox 列名与单位（Linear Acceleration，m/s^2），按 3 秒窗口提取特征，
 输出波形图、特征表、可解释阈值规则与交叉验证混淆矩阵。
 
@@ -37,7 +37,7 @@ import signal_core as core  # noqa: E402
 RESULTS = HERE / "results"
 RESULTS.mkdir(exist_ok=True)
 RAW = HERE / "gait_raw"          # 早期计划用的扁平目录（可继续兼容）
-NEW_RAW = HERE / "课题08"        # 2026-11-16 实际采集目录：课题08/<姿态>/*.csv
+NEW_RAW = HERE / "raw_data" / "gait"   # 2026-11-16 实际采集：raw_data/gait/<姿态>/*.csv
 STATES = ["静止", "平地慢走", "快跑", "上下楼梯"]
 FIELDS = ["file", "state", "window", "svm_mean", "svm_std", "az_range",
           "dominant_hz", "zcr", "centroid", "cadence", "cad_cv", "align", "ratio"]
@@ -89,7 +89,7 @@ def demo_files(out):
 
 
 def real_files():
-    """优先读 gait_raw/；若为空则自动读 2026-11-16 实际采集的 课题08/ 目录。"""
+    """优先读 gait_raw/；若为空则自动读 2026-11-16 实际采集的 raw_data/gait/ 目录。"""
     out = []
     if RAW.exists():
         for p in sorted(RAW.glob("*.csv")):
@@ -390,7 +390,7 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     pairs = demo_files(OUT) if a.demo else real_files()
     if not pairs:
-        print("课题08/ 或 gait_raw/ 里还没有 CSV。按 DAILY_PLAN.md 采集，或先加 --demo 试跑。")
+        print("raw_data/gait/ 或 gait_raw/ 里还没有 CSV。按 DAILY_PLAN.md 采集，或先加 --demo 试跑。")
         return 0
 
     skipped = []
@@ -505,7 +505,7 @@ def main():
         cmp_res.append((label, a1, a2))
 
     if skipped:
-        scope_note = (f"- 已排除无效组：{', '.join(s for s, _ in skipped)} —— 依据 AI使用报告/第一阶段/课题08核对报告.html，"
+        scope_note = (f"- 已排除无效组：{', '.join(s for s, _ in skipped)} —— 依据 03-AI-Collaboration/第一阶段/课题08核对报告.html，"
                       "有效动作未录到，待重采；重采前本表为 3 类流程验证，**不是最终 4 类结论**。")
     elif a.include_invalid and not a.demo:
         scope_note = ("- **4 类全部纳入**：含 `--include-invalid` 显式纳入的全部组。"

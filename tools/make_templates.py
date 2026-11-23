@@ -31,8 +31,8 @@ DAYS = [
      "2026-11-14 课题06补齐15组并出图，课题08完成12份步态采集"),
     ("2026-11-15", "周日", 3, "阶段一两课题定稿",
      ["跑 analyze_gait.py 出波形图、特征表、混淆矩阵、阈值规则",
-      "写完整 01_Stage1_Field_Measurement/README.md",
-      "主 README 进度表把课题06/08 两行打勾"],
+      "写完整 01-Field-Discovery/README.md",
+      "主 README 进度表把raw_data/acoustic/08 两行打勾"],
      ["阶段一完整报告", "08_* 系列分析产物", "process_logs/2026-11-15.md"],
      "2026-11-15 阶段一两课题报告定稿，含异常值归因与阈值验证"),
     ("2026-11-16", "周一", 4, "项目三真实 WAV 特征提取",
@@ -61,7 +61,7 @@ DAYS = [
       "补 AI_Chat_Log.md 至少 5 条真实问答（含我改了什么、验证结果）",
       "主 README 补复现步骤、评分对照表、诚信声明",
       "理顺 D1/D2/D3 日志结构，内容一字不删"],
-     ["02_Stage2_Project_Vibration/README.md 定稿", "AI_Chat_Log.md", "根 README.md 定稿"],
+     ["02-20Days-Challenge/README.md 定稿", "AI_Chat_Log.md", "根 README.md 定稿"],
      "2026-11-19 全部报告定稿，AI协作记录与诚信声明补齐"),
     ("2026-11-20", "周五", 8, "自检 + 面试演练 + 最终推送",
      ["跑 --check，确认无 MISSING",
@@ -83,7 +83,7 @@ HISTORY = [
       "实验室走廊左 20:32：35 / 46 / 39 dB；右 20:33：35 / 44 / 38 dB",
       "项目三用 OPPO Reno 15 麦克风、距离 3–5 cm，采集 low / high / friction 各 15 组 10 秒音频",
       "踩坑：应用商店搜不到 Phyphox 只有广告 → 先用手机原生录音机保住核心数据；NCH Switch 弹付费 → 改用免费在线转换"],
-     "01_Stage1_Field_Measurement 的 3 组 JPG/PNG/MP4；02 目录 day1.jpg 等现场照"),
+     "01-Field-Discovery 的 3 组 JPG/PNG/MP4；02 目录 day1.jpg 等现场照"),
     ("2026-11-05", "课题06 第二轮 + 项目三 D2",
      ["图书馆一楼 11:50：7 / 53 / 41 dB",
       "⚠️ 最小 7 dB 是异常值：曲线从约 6 dB 起步，判断为 App 启动瞬间麦克风尚未稳定的爬升假值，保留原始记录并安排重测",
@@ -195,7 +195,7 @@ def make_experiment_log():
     rows = []
     for key, label in cond.items():
         for i in range(1, 16):
-            rel = f"02_Stage2_Project_Vibration/{key}-15/{key}-{i}.wav"
+            rel = f"02-20Days-Challenge/{key}-15/{key}-{i}.wav"
             p = ROOT / rel
             dur, rate, ch, sw = "", "", "", ""
             if p.exists():
@@ -213,14 +213,14 @@ def make_experiment_log():
                 "mic_distance_cm": "3-5", "device": "OPPO Reno 15 内置麦克风",
                 "photo": "", "note": "日期取自 git 首次提交时间，如与拍摄时间不符请照实修正",
             })
-    out = ROOT / "02_Stage2_Project_Vibration" / "experiment_log.csv"
+    out = ROOT / "02-20Days-Challenge" / "experiment_log.csv"
     core.write_csv(out, rows)
     known = sum(1 for r in rows if r["date_recorded"] != "待核对")
     print(f"experiment_log.csv：75 行，其中 {known} 行日期已从 git 历史还原")
 
 
 def make_protocol():
-    p = ROOT / "02_Stage2_Project_Vibration" / "protocol.md"
+    p = ROOT / "02-20Days-Challenge" / "protocol.md"
     if p.exists() and not ARGS.force:
         return
     p.write_text("""# 项目三 · 五种工况可复现定义（Day 4 核对填写）

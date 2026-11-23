@@ -85,7 +85,7 @@
 
 <div class="note">
   数据来源：<code>results/features.csv</code> → <code>blind_test/blind_detail.csv</code>（逐段明细，可复核）。<br/>
-  复现命令：<code>python 02_Stage2_Project_Vibration\analyze_real_wav.py --blind</code>，
+  复现命令：<code>python 02-20Days-Challenge\analyze_real_wav.py --blind</code>，
   结果见 <code>results/blind_report.md</code>。本页仅把同一批结果做成可视化演示，未改动任何预测。
 </div>
 
@@ -128,9 +128,9 @@ function render() {
   if (idx === n) {
     const acc = (hit / n * 100).toFixed(1);
     $('final').style.display = 'block';
-    $('final').innerHTML = '<b>盲测完成：' + hit + ' / ' + n + ' = ' + acc + '%</b><br>' +
+    $('final').innerHTML = '<b>盲测完成：' + hit + ' / ' + n + ' = ' + acc + '%</b><br/>' +
       '与 <code>results/blind_report.md</code> 的 80.0% 一致。判错的 ' + (n - hit) +
-      ' 段已逐条保留在明细表中，未做任何剔除或事后调参。<br>' +
+      ' 段已逐条保留在明细表中，未做任何剔除或事后调参。<br/>' +
       '说明：这是<b>同批次</b>盲测（同一天录的 13–15 段），不是跨日 held-out；两者区别已在 README 如实写明。';
   }
 }

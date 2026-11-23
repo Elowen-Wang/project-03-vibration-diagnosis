@@ -1,4 +1,4 @@
-# 第二阶段 · 项目三：手机传感器异常声振诊断仪
+# 02 · 20 Days Challenge｜项目三：手机传感器异常声振诊断仪
 
 | | |
 |---|---|
@@ -239,13 +239,13 @@ FFT 为迭代 radix-2 Cooley-Tukey 实现，Hann 窗、8192 点零填充。
 
 ```bat
 cd /d C:\Users\wangy\Desktop\project-03-vibration-diagnosis
-python 02_Stage2_Project_Vibration\analyze_real_wav.py --extract
-python 02_Stage2_Project_Vibration\analyze_real_wav.py --classify
-python 02_Stage2_Project_Vibration\analyze_real_wav.py --blind
-python 02_Stage2_Project_Vibration\analyze_real_wav.py --noise
-python 02_Stage2_Project_Vibration\analyze_real_wav.py --ablation
-python 02_Stage2_Project_Vibration\analyze_real_wav.py --check
-python 02_Stage2_Project_Vibration\analyze_acoustic_limits.py --all
+python 02-20Days-Challenge\analyze_real_wav.py --extract
+python 02-20Days-Challenge\analyze_real_wav.py --classify
+python 02-20Days-Challenge\analyze_real_wav.py --blind
+python 02-20Days-Challenge\analyze_real_wav.py --noise
+python 02-20Days-Challenge\analyze_real_wav.py --ablation
+python 02-20Days-Challenge\analyze_real_wav.py --check
+python 02-20Days-Challenge\analyze_acoustic_limits.py --all
 ```
 
 或一次跑完 `--all`；另有 `--blind2` / `--noise2`（第二轮）、`--heldout` / `--accel` / `--demo`。全部图表输出 SVG。
@@ -255,10 +255,10 @@ python 02_Stage2_Project_Vibration\analyze_acoustic_limits.py --all
 
 | 官网要求 | 对应文件 | 状态 |
 |---|---|---|
-| ① 5 工况 × 15 组原始 WAV/CSV 及实验照（20 分） | `*-15/`、`experiment_log.csv`、`实验照索引.md`、`day*.jpg`、`*.png`、`*.mp4` | 齐；摩擦/失衡为道具照 |
+| ① 5 工况 × 15 组原始 WAV/CSV 及实验照（20 分） | `*-15/`、`experiment_log.csv`、`实验照索引.md`、`photos/`（设备照 · 分贝报告 · 现场视频） | 齐；摩擦/失衡为道具照 |
 | ② 时域/频域特征提取代码（20 分） | `analyze_real_wav.py`、`analyze_acoustic_limits.py`、`tools/signal_core.py`、`results/features.csv`、`spectrum_compare.svg` | 75 段跑通 |
 | ③ 盲测准确率视频与抗噪报告（20 分） | `results/loo_report.md`、`blind_report*.md`、`noise_robustness*.md`、`blind_test/` | 视频（第一轮实时录屏）+ 两轮盲测 + 两轮抗噪 + 消融 |
 | 补充分析（不计分，界定结论边界） | `results/acoustic_band_limits.md`、`envelope_experiment.md` | 频带覆盖 + 包络负结果 |
-| 跨多日过程数据 | `../process_logs/` 15 份 + Git 提交历史 + `../AI使用报告/` | 齐 |
+| 跨多日过程数据 | `./process_logs/` 15 份 + Git 提交历史 + `../03-AI-Collaboration/` | 齐 |
 
 逐条对照见 [交付清单.md](./交付清单.md)；录屏步骤见 [blind_test/README.md](./blind_test/README.md)。

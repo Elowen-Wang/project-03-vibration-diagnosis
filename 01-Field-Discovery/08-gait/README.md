@@ -15,7 +15,7 @@
 ## 一、目录与字段
 
 ```
-课题08/
+raw_data/gait/
 ├── 静止/          stationary.csv · stationary.mp4 · meta/{device,time}.csv
 ├── 慢走/          walking.csv    · walking.mp4    · meta/
 ├── 快跑/          Raw Data.csv   · 2bd3988d….mp4  · meta/     ← 11-19 重采，31.98 s 有效
@@ -37,7 +37,7 @@
 
 ## 二、逐组核对
 
-来源：[课题08核对报告.html](../../AI使用报告/第一阶段/课题08核对报告.html)（只读核对，未改动原始文件）。差值为「视频 − CSV」，视频为传感器曲线录屏。
+来源：[课题08核对报告.html](../../03-AI-Collaboration/第一阶段/课题08核对报告.html)（只读核对，未改动原始文件）。差值为「视频 − CSV」，视频为传感器曲线录屏。
 
 | 组别 | 开始时刻 | CSV 时长 | 视频时长 | 差值 | \|a\| RMS | 峰值 | 判定 |
 |---|---|---:|---:|---:|---:|---:|---|
@@ -81,8 +81,8 @@ else:                           平地慢走   # 双脚交替，能量落在 2×
 在仓库根目录执行：
 
 ```bat
-python 01_Stage1_Field_Measurement\analyze_gait.py            :: 正式：读本目录真实 CSV，纳入 4 类
-python 01_Stage1_Field_Measurement\analyze_gait.py --demo     :: 演示：合成数据写系统临时目录
+python 01-Field-Discovery\analyze_gait.py            :: 正式：读本目录真实 CSV，纳入 4 类
+python 01-Field-Discovery\analyze_gait.py --demo     :: 演示：合成数据写系统临时目录
 ```
 
 ---

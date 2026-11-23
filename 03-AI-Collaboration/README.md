@@ -1,4 +1,4 @@
-# AI 使用报告 · 过程截图与核对证据
+# 03 · AI Collaboration｜AI 使用记录与核对证据
 
 **参赛者**：王宇婷 · 2027094　**定稿**：2026-11-23
 
@@ -38,7 +38,7 @@
 4. 录屏与采集独立起停（差 −4.42 ~ +11.89 s），不能逐秒对齐，只做整体特征比对。
 5. **不可用文件时间戳对齐**：MP4 `creation_time` 为导出/封装时刻，文件修改时间为拷贝时刻；真实采集时刻只认 `time.csv` 与画面状态栏。
 
-后续已落到代码与文档：`analyze_gait.py` 按有效时长 < 12 s 客观判定无效样本（不按姿态名硬编码），按报告建议裁尾，并在终端打印依据；[`../01_Stage1_Field_Measurement/课题08/README.md`](../01_Stage1_Field_Measurement/课题08/README.md) 逐组列出核对数字。
+后续已落到代码与文档：`analyze_gait.py` 按有效时长 < 12 s 客观判定无效样本（不按姿态名硬编码），按报告建议裁尾，并在终端打印依据；[`../01-Field-Discovery/08-gait/README.md`](../01-Field-Discovery/08-gait/README.md) 逐组列出核对数字。
 
 ## 三、评分项对照
 

@@ -2,8 +2,8 @@
 
 本脚本读取仓库里真实的 75 段 WAV，不做任何模拟数据。用法（在仓库根目录执行）：
 
-    python 02_Stage2_Project_Vibration\\analyze_real_wav.py --extract
-    python 02_Stage2_Project_Vibration\\analyze_real_wav.py --all
+    python 02-20Days-Challenge\\analyze_real_wav.py --extract
+    python 02-20Days-Challenge\\analyze_real_wav.py --all
 
 可选步骤：--extract --classify --blind --noise --heldout --accel --check --all
 """
@@ -557,7 +557,7 @@ def step_check():
         print(f"  [{flag}] {label:<8} {found}/15 WAV")
         if found != 15:
             missing.append(f"{folder} 缺 {15 - found} 个")
-    noise = ROOT / "01_Stage1_Field_Measurement" / "noise_log.csv"
+    noise = ROOT / "01-Field-Discovery" / "raw_data" / "noise_log.csv"
     n_noise = 0
     if noise.exists():
         # 只统计标准表 N01–N15 且真的填了平均声级的行，空模板不算完成
@@ -574,9 +574,9 @@ def step_check():
                         and "H" in str(r.get("source", ""))) if noise.exists() else 0
     print(f"  [INFO] 课题06 H 记录 {n_hist} 组（{n_grid_from_h} 组已归入标准格，"
           f"其余为佐证或排障样本，不重复计数）")
-    stage1 = ROOT / "01_Stage1_Field_Measurement"
+    stage1 = ROOT / "01-Field-Discovery"
     gait_flat = list((stage1 / "gait_raw").glob("*.csv"))
-    gait_dir = stage1 / "课题08"
+    gait_dir = stage1 / "raw_data" / "gait"
     gait_new = list(gait_dir.glob("*/*.csv")) if gait_dir.exists() else []
     # 与 analyze_gait.py 同口径：按有效时长判无效，不再按文件名硬编码排除。
     # 旧快跑仅 3.88 s 无效；11-19 重采为 31.98 s，已自动转为有效。
@@ -599,16 +599,16 @@ def step_check():
         missing.append("课题08 有效步态 CSV 不足 4 份")
     if invalid:
         print("  [PENDING] 存在时长<12s 的步态样本，待重采后在 analyze_gait.py 自动纳入")
-    logs = list((ROOT / "process_logs").glob("2026-*.md"))
+    logs = list((ROOT / "02-20Days-Challenge" / "process_logs").glob("2026-*.md"))
     print(f"  [{'OK' if len(logs) >= 11 else 'MISSING'}] 过程日志 {len(logs)} 份"
           "（11/14、11/15、11/17 为空模板，如实留白）")
     if len(logs) < 11:
         missing.append("process_logs 缺日志")
-    for rel in ["README.md", "01_Stage1_Field_Measurement/README.md",
-                "02_Stage2_Project_Vibration/README.md", "AI_Chat_Log.md", "DAILY_PLAN.md",
-                "01_Stage1_Field_Measurement/课题06/README.md",
-                "01_Stage1_Field_Measurement/课题08/README.md",
-                "AI使用报告/README.md", "process_logs/README.md"]:
+    for rel in ["README.md", "01-Field-Discovery/README.md",
+                "02-20Days-Challenge/README.md", "AI_Chat_Log.md", "DAILY_PLAN.md",
+                "01-Field-Discovery/06-acoustic/README.md",
+                "01-Field-Discovery/08-gait/README.md",
+                "03-AI-Collaboration/README.md", "02-20Days-Challenge/process_logs/README.md"]:
         ok = (ROOT / rel).exists()
         print(f"  [{'OK' if ok else 'MISSING'}] {rel}")
         if not ok:

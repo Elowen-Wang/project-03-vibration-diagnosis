@@ -7,9 +7,9 @@
      用包络解调提取冲击重复率等 4 个特征，与现有 11 维一起做留一法对比。
 
 用法（在仓库根目录执行）：
-    python 02_Stage2_Project_Vibration/analyze_acoustic_limits.py --bands
-    python 02_Stage2_Project_Vibration/analyze_acoustic_limits.py --env
-    python 02_Stage2_Project_Vibration/analyze_acoustic_limits.py --all
+    python 02-20Days-Challenge/analyze_acoustic_limits.py --bands
+    python 02-20Days-Challenge/analyze_acoustic_limits.py --env
+    python 02-20Days-Challenge/analyze_acoustic_limits.py --all
 """
 from __future__ import annotations
 

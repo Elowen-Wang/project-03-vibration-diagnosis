@@ -17,8 +17,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 import signal_core as core  # noqa: E402
 
-FEAT = ROOT / "02_Stage2_Project_Vibration" / "results" / "features.csv"
-OUT = ROOT / "02_Stage2_Project_Vibration" / "blind_test"
+FEAT = ROOT / "02-20Days-Challenge" / "results" / "features.csv"
+OUT = ROOT / "02-20Days-Challenge" / "blind_test"
 OUT.mkdir(parents=True, exist_ok=True)
 
 
@@ -96,7 +96,7 @@ HTML = """<!DOCTYPE html>
 <body>
 <h1>项目三 · 盲测准确率现场演示</h1>
 <div class="sub">
-  模型只用 <b>每工况 1–12 段</b> 训练（共 __NTRAIN__ 段），<b>13–15 段完全不参与训练</b>（共 __NTEST__ 段）。<br>
+  模型只用 <b>每工况 1–12 段</b> 训练（共 __NTRAIN__ 段），<b>13–15 段完全不参与训练</b>（共 __NTEST__ 段）。<br/>
   分类器：标准化后的 11 维时/频域特征 + 最近质心；Python 标准库实现 FFT，无机器学习框架。
 </div>
 
@@ -129,12 +129,13 @@ HTML = """<!DOCTYPE html>
 <div class="final" id="final"></div>
 
 <div class="note">
-  数据来源：<code>results/features.csv</code> → <code>blind_test/blind_detail.csv</code>（逐段明细，可复核）。<br>
-  复现命令：<code>python 02_Stage2_Project_Vibration\\analyze_real_wav.py --blind</code>，
+  数据来源：<code>results/features.csv</code> → <code>blind_test/blind_detail.csv</code>（逐段明细，可复核）。<br/>
+  复现命令：<code>python 02-20Days-Challenge\\analyze_real_wav.py --blind</code>，
   结果见 <code>results/blind_report.md</code>。本页仅把同一批结果做成可视化演示，未改动任何预测。
 </div>
 
 <script>
+//<![CDATA[
 const DATA = __DATA__;
 let idx = 0, hit = 0, timer = null;
 const $ = id => document.getElementById(id);
@@ -172,9 +173,9 @@ function render() {
   if (idx === n) {
     const acc = (hit / n * 100).toFixed(1);
     $('final').style.display = 'block';
-    $('final').innerHTML = '<b>盲测完成：' + hit + ' / ' + n + ' = ' + acc + '%</b><br>' +
+    $('final').innerHTML = '<b>盲测完成：' + hit + ' / ' + n + ' = ' + acc + '%</b><br/>' +
       '与 <code>results/blind_report.md</code> 的 80.0% 一致。判错的 ' + (n - hit) +
-      ' 段已逐条保留在明细表中，未做任何剔除或事后调参。<br>' +
+      ' 段已逐条保留在明细表中，未做任何剔除或事后调参。<br/>' +
       '说明：这是<b>同批次</b>盲测（同一天录的 13–15 段），不是跨日 held-out；两者区别已在 README 如实写明。';
   }
 }
@@ -197,6 +198,7 @@ $('reset').onclick = () => {
   idx = 0; hit = 0; render();
 };
 render();
+//]]>
 </script>
 </body>
 </html>
