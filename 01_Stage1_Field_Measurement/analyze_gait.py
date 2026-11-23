@@ -451,7 +451,7 @@ def main():
     dom = [core.mean([f["dominant_hz"] for f in feats if f["state"] == s]) for s in cats]
     core.save_svg(OUT / "08_feature_bars.svg", 680, 280,
                   core.bar_chart(cats, [round(v, 2) for v in dom],
-                                 title="各姿态步态主频对比 Hz", ylabel="Hz", value_fmt="{:.2f}"))
+                                 title="各姿态步态主频对比（Hz）", value_fmt="{:.2f}"))
 
     # 四类姿态特征雷达图：各维按全体最大值归一化到 0–1，避免量纲差异压平图形
     rkeys = ["svm_mean", "svm_std", "az_range", "dominant_hz", "cadence", "ratio"]

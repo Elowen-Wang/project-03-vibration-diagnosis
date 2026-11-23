@@ -219,8 +219,8 @@ def main():
     # 柱状图：所有已填记录的平均分贝
     labels = [f"{r['record_id']} {r.get('location', '')}" for r in filled]
     vals = [core.fnum(r["avg_db"]) for r in filled]
-    core.save_svg(RESULTS / "06_noise_bars.svg", 680, 300,
-                  core.bar_chart(labels, vals, title="各记录平均声级 dB(A)", ylabel="dB"))
+    core.save_svg(RESULTS / "06_noise_bars.svg", 680, 320,
+                  core.bar_chart(labels, vals, title="各记录平均声级 dB(A)", height=320))
 
     # 噪声地图：始终以官网要求的「5 点位 × 3 时段」完整矩阵呈现。
     # 无论采到几组，未采集的格子都保留占位（雷达图按 0 绘制、热力图画斜线标注），

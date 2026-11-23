@@ -439,28 +439,40 @@ def line_chart(series, title="", xlabel="", ylabel="", width=680, height=280,
 
 def bar_chart(categories, values, title="", ylabel="", width=680, height=280,
               colors=None, value_fmt="{:.1f}"):
-    L, R, T, B = 62, 20, 44 if title else 20, 56
+    L, R, T = 62, 20, 44 if title else 20
+    # 类别多时横排标签必然互相压字，改为斜排并腾出底部空间
+    rot = len(categories) > 12
+    B = 88 if rot else 56
     pw, ph = width - L - R, height - T - B
-    y1 = max(values + [1e-9]) * 1.15
+    # 刻度取 1/2/2.5/5 的整数倍，避免出现 1e+02、26、51 这类读不出的刻度
+    step = _nice_step(max(values + [1e-9]) * 1.05, 4)
+    n_ticks = max(2, int(math.ceil(max(values + [1e-9]) * 1.05 / step)))
+    y1 = step * n_ticks
     bw = pw / max(len(categories), 1) * 0.6
-    step = pw / max(len(categories), 1)
+    step_x = pw / max(len(categories), 1)
     b = []
     if title:
         b.append(f'<text x="{L}" y="24" font-size="14" font-weight="500" fill="{INK}">{_esc(title)}</text>')
-    for i in range(5):
-        v = y1 * i / 4
+    fmt = "{:.0f}" if step >= 1 else ("{:.1f}" if step >= 0.1 else "{:.2f}")
+    for i in range(n_ticks + 1):
+        v = step * i
         y = T + ph - v / y1 * ph
         b.append(f'<line x1="{L}" y1="{y:.1f}" x2="{L + pw}" y2="{y:.1f}" stroke="{GRID}" stroke-width="0.5"/>')
-        b.append(f'<text x="{L - 8}" y="{y + 4:.1f}" font-size="11" fill="{MUTED}" text-anchor="end">{v:.2g}</text>')
+        b.append(f'<text x="{L - 8}" y="{y + 4:.1f}" font-size="11" fill="{MUTED}" text-anchor="end">{fmt.format(v)}</text>')
     for i, (c, v) in enumerate(zip(categories, values)):
-        x = L + step * i + (step - bw) / 2
+        x = L + step_x * i + (step_x - bw) / 2
         h = v / y1 * ph
         color = (colors or PALETTE)[i % len(colors or PALETTE)]
         b.append(f'<rect x="{x:.1f}" y="{T + ph - h:.1f}" width="{bw:.1f}" height="{h:.1f}" rx="3" fill="{color}"/>')
         b.append(f'<text x="{x + bw / 2:.1f}" y="{T + ph - h - 6:.1f}" font-size="11" fill="{INK}" '
                  f'text-anchor="middle">{_esc(value_fmt.format(v))}</text>')
-        b.append(f'<text x="{x + bw / 2:.1f}" y="{T + ph + 18:.1f}" font-size="11" fill="{MUTED}" '
-                 f'text-anchor="middle">{_esc(c)}</text>')
+        if rot:
+            b.append(f'<text x="{x + bw / 2:.1f}" y="{T + ph + 12:.1f}" font-size="9.5" fill="{MUTED}" '
+                     f'text-anchor="end" transform="rotate(-42 {x + bw / 2:.1f} {T + ph + 12:.1f})">'
+                     f'{_esc(c)}</text>')
+        else:
+            b.append(f'<text x="{x + bw / 2:.1f}" y="{T + ph + 18:.1f}" font-size="11" fill="{MUTED}" '
+                     f'text-anchor="middle">{_esc(c)}</text>')
     if ylabel:
         b.append(f'<text x="{L}" y="{T - 8}" font-size="11" fill="{MUTED}">{_esc(ylabel)}</text>')
     return "".join(b)
@@ -879,6 +891,112 @@ def read_wav_mono(path, target_rate=4000, seconds=2.0):
         out.append(sum(chunk) / len(chunk) / 32768.0)
         k += 1
     return out, target_rate
+
+
+def band_energy_ratios(signal, sample_rate, edges):
+    """按频带统计能量占比，返回与 len(edges)-1 等长的列表，和为 1。
+
+    用幅度平方（能量）而非幅度求和：能量占比才能回答「这段信号的能量主要落在
+    哪个频带」，直接加幅度会让宽频带凭空占便宜。
+    """
+    centered = [x - mean(signal) for x in signal]
+    freqs, mags = spectrum(centered, sample_rate)
+    if not mags:
+        return [0.0] * (len(edges) - 1)
+    p = [m * m for m in mags]
+    tot = sum(p) or 1e-18
+    return [sum(v for f, v in zip(freqs, p) if lo <= f < hi) / tot
+            for lo, hi in zip(edges[:-1], edges[1:])]
+
+
+def _fft_inverse(a):
+    """逆 FFT：ifft(X) = conj(fft(conj(X))) / n，复用同一个 radix-2 内核。"""
+    n = len(a)
+    return [v.conjugate() / n for v in fft([x.conjugate() for x in a])]
+
+
+def analytic_envelope(signal, sample_rate, band=(500.0, 3500.0), env_rate=200.0):
+    """带通 + 解析信号求包络，返回 (包络, env_rate)。
+
+    做法：一次前向 FFT 后只保留 [lo, hi] 内的正频率并乘 2、其余置零，
+    逆变换直接得到该频带的解析信号，取模即包络——全程两次 FFT。
+    频带边缘加 5% 余弦过渡，避免矩形掩膜在时域产生振铃。
+    包络本身是低频量（几 Hz 到几十 Hz），按 env_rate 再降采样即可。
+    """
+    n = len(signal)
+    if n < 64:
+        return [], env_rate
+    n_fft = 1
+    while n_fft < n:
+        n_fft <<= 1
+    buf = [complex(x - mean(signal)) for x in signal] + [0j] * (n_fft - n)
+    sp = fft(buf)
+    lo, hi = band
+    taper = max((hi - lo) * 0.05, 1.0)
+
+    def gain(f):
+        if f < lo or f > hi:
+            return 0.0
+        edge = min(f - lo, hi - f)
+        if edge < taper:
+            return 0.5 - 0.5 * math.cos(math.pi * edge / taper)
+        return 1.0
+
+    for k in range(1, n_fft // 2):                 # 正频率乘 2 构造解析信号
+        g = gain(k * sample_rate / n_fft) * 2.0
+        if g:
+            sp[k] *= g
+        else:
+            sp[k] = 0j
+        sp[n_fft - k] = 0j                          # 负频率全部置零
+    sp[0] = 0j
+    sp[n_fft // 2] = 0j
+    env = [abs(v) for v in _fft_inverse(sp)[:n]]
+    if env_rate < sample_rate:
+        step = sample_rate / env_rate
+        out, k = [], 0
+        while True:
+            a = int(k * step)
+            if a >= len(env):
+                break
+            b = max(a + 1, int((k + 1) * step))
+            chunk = env[a:b]
+            out.append(sum(chunk) / len(chunk))
+            k += 1
+        return out, env_rate
+    return env, sample_rate
+
+
+def envelope_features(signal, sample_rate, band=(500.0, 3500.0), env_rate=200.0,
+                      f_lo=5.0, f_hi=100.0):
+    """包络解调特征——摩擦/受阻这类冲击性故障的判别量。
+
+    物理依据：叶片每转一圈刮擦一次，冲击重复率等于转频或其整数倍，
+    在包络谱上表现为一根窄峰；而稳态气动噪声的包络是随机的、没有窄峰。
+      env_peak_hz —— 包络谱 5–100 Hz 内的最高峰位置（冲击重复率）
+      env_snr     —— 该峰与本底中位数之比（峰有多突出）
+      env_kurt    —— 包络峭度（冲击越尖锐越大）
+      env_cv      —— 包络变异系数（调制深度）
+    """
+    out = {"env_peak_hz": 0.0, "env_snr": 0.0, "env_kurt": 0.0, "env_cv": 0.0}
+    env, er = analytic_envelope(signal, sample_rate, band, env_rate)
+    if len(env) < 64:
+        return out
+    m = mean(env)
+    out["env_cv"] = std(env) / (m + 1e-12)
+    d = [x - m for x in env]
+    m2 = sum(x * x for x in d) / len(d)
+    m4 = sum(x ** 4 for x in d) / len(d)
+    out["env_kurt"] = m4 / (m2 * m2 + 1e-18) - 3.0
+    freqs, mags = spectrum(d, er, n_fft=1024)
+    band_idx = [i for i, f in enumerate(freqs) if f_lo <= f <= f_hi]
+    if band_idx:
+        k = max(band_idx, key=lambda i: mags[i])
+        out["env_peak_hz"] = freqs[k]
+        ordered = sorted(mags[i] for i in band_idx)
+        med = ordered[len(ordered) // 2]
+        out["env_snr"] = mags[k] / (med + 1e-12)
+    return out
 
 
 def add_awgn(signal, snr_db, seed=0):

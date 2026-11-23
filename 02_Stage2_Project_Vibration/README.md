@@ -13,6 +13,8 @@
 | 留一法交叉验证 | **89.3%**（75 段） |
 | 同批次盲测 | **80.0%**（第一轮）· **93.3%**（第二轮，盲测段互斥） |
 | 分类器 | 标准化 + 最近质心，纯 Python 标准库 |
+| 声学通道边界 | 100 Hz 以下仅占 1.5% 能量；判别信息在 1.5 kHz 以下的冲击性与频带分布 |
+| 包络解调试验 | 无增益（89.3% → 89.3%），作为负结果保留 |
 | 环境依赖 | 零第三方依赖 |
 
 盲测两轮相差 13.3 pp：训练量相同（每工况 12 段），差异只来自「哪 3 段被留出」，说明每类 15 段时测试集选择本身带来约 ±7 pp 的波动。跨日 held-out 未采集（0/15），不把同批次盲测记作 held-out。
@@ -67,6 +69,7 @@ MP3 → WAV 只换容器，不恢复已丢失的高频。风扇判别信息集�
 | 文件 | 作用 |
 |---|---|
 | `analyze_real_wav.py` | 主脚本：读 WAV、提特征、分类、盲测、抗噪、特征消融、自检 |
+| `analyze_acoustic_limits.py` | 声学通道频带覆盖 + 包络解调试验（界定结论边界） |
 | `../tools/signal_core.py` | 零依赖内核：radix-2 FFT、频谱特征、WAV 读取与降采样、SVG 绘图、最近质心分类器 |
 
 ### 11 维特征
@@ -102,6 +105,9 @@ FFT 为迭代 radix-2 Cooley-Tukey 实现，加 Hann 窗、8192 点零填充。
 | `results/feature_ablation.md` / `.svg` | 11 维特征逐个屏蔽后的留一法准确率 |
 | `blind_test/blind_detail.csv` · `盲测演示.html` | 第一轮 15 段明细 + 演示页（12/15 = 80.0%，视频即此轮实时录屏） |
 | `blind_test/blind_detail_round2.csv` | 第二轮 15 段明细（14/15 = 93.3%） |
+| `results/acoustic_band_limits.md` / `.svg` | 声学通道频带覆盖：75 段原始 48 kHz 能量分解 |
+| `results/envelope_experiment.md` | 包络解调试验：4 维特征有无增益（结论：无） |
+| `results/envelope_compare.svg` · `envelope_spectrum.svg` | 三特征集准确率对比、五工况包络谱 |
 
 ### 五工况幅度谱
 
@@ -163,6 +169,36 @@ FFT 为迭代 radix-2 Cooley-Tukey 实现，加 Hann 窗、8192 点零填充。
 
 高频簇约为基频的 4–5 倍（770≈154×5、580≈147×4），为谐波幅值偶尔超过基频所致。原始文件保留，分类照实统计；后续可将 `dominant_hz` 限制在基频带内取峰，或明确说明取的是最强峰。
 
+### 声学通道的能力边界
+
+对 75 段**原始 48 kHz** 信号逐段做能量分解（双声道取均值、居中 0.5 s、Hann 窗），界定「以声代振」能走到哪一步：
+
+| 频带 | <100 Hz | 100–500 Hz | 0.5–2 kHz | 2–5 kHz | >5 kHz |
+|---|---|---|---|---|---|
+| 五工况均值 | **1.5%** | 8.2% | 10.4% | 24.0% | **56.0%** |
+
+![五种工况的能量频带分布](./results/acoustic_band_limits.svg)
+
+- 手机 MEMS 麦克风在 80–100 Hz 以下明显滚降，100 Hz 以下的结构振动（轴承特征频率、低频失衡分量）测不到；本项目风机转频落在 100–155 Hz，**仍在可观测区间**。
+- 能量 56% 在 5 kHz 以上，但那是稳态气动噪声与高频啸叫；消融结果显示判别力来自 `crest`（冲击性）与 `band1`/`band3`（1.5 kHz 以下能量分布）——**能量大不等于信息多**。
+- 因此本项目成立的是**声学诊断**：可讨论谐波结构、冲击性、频带能量；不能给出 m/s² 振级，声振融合亦未做（只有一条通道）。
+
+### 包络解调试验（负结果）
+
+低频既已缺失，冲击的**重复节律**仍留在中高频里。对每段 8 kHz 信号做 500–3500 Hz 带通、取解析信号的模得包络，再对包络做频谱，提取 4 个量：冲击重复率 `env_peak_hz`、峰信噪比 `env_snr`、包络峭度 `env_kurt`、调制深度 `env_cv`。
+
+| 特征集 | 留一法准确率 |
+|---|---|
+| 基线 11 维 | **89.3%** |
+| 11 维 + 包络 4 维 | **89.3%**（+0.0 pp） |
+| 仅包络 4 维 | 42.7%（随机 20.0%） |
+
+包络单独能到 42.7%，说明它确实带着一部分判别信息；但并入后无变化——`crest` 度量峰值冲击、`flatness` 度量谱平坦度，与包络峭度、包络谱信噪比描述的是同一件事，再叠加同义特征只会稀释最近质心的距离。**结论：不并入主流程，作为已验证的负结果保留**，完整过程见 [`results/envelope_experiment.md`](./results/envelope_experiment.md)。
+
+![包络特征是否带来增益](./results/envelope_compare.svg)
+
+![五工况包络谱对比](./results/envelope_spectrum.svg)
+
 ---
 
 ## 四、数据真实性
@@ -192,7 +228,7 @@ FFT 为迭代 radix-2 Cooley-Tukey 实现，加 Hann 窗、8192 点零填充。
 ## 六、局限
 
 1. MP3 → WAV 只换容器，不恢复高频。
-2. 加速度通道未采，分类用声学单通道，未验证声振融合增益。课题 08 已采 5 组三轴加速度 CSV，证明通道可行；补采设备与声学设备不同，分列记录。
+2. 加速度通道未采，分类用声学单通道。已量化通道边界：100 Hz 以下仅占 1.5% 能量（见 [`results/acoustic_band_limits.md`](./results/acoustic_band_limits.md)），故未验证声振融合增益；包络解调用声学信号做过替代试验，无增益（[`results/envelope_experiment.md`](./results/envelope_experiment.md)）。
 3. 未做声级计校准，分贝报告仅用于相对比较。
 4. 低电量效应为候选假设，未实测转速。
 5. 35 段基频/谐波双峰样本保留，属特征定义问题，非录音错误。
@@ -212,17 +248,20 @@ python 02_Stage2_Project_Vibration\analyze_real_wav.py --blind
 python 02_Stage2_Project_Vibration\analyze_real_wav.py --noise
 python 02_Stage2_Project_Vibration\analyze_real_wav.py --ablation
 python 02_Stage2_Project_Vibration\analyze_real_wav.py --check
+python 02_Stage2_Project_Vibration\analyze_acoustic_limits.py --all
 ```
 
 或一次跑完：`--all`。另可用 `--heldout` / `--accel` / `--demo`。全部图表输出 SVG。
+`analyze_acoustic_limits.py` 做 48 kHz 全频带 FFT 与包络解调，约需 7 分钟；调版式时用 `--charts` / `--envcharts` 只重绘。
 
 ## 八、官网评分对照
 
 | 官网要求 | 对应文件 | 状态 |
 |---|---|---|
 | ① 5 工况 × 15 组原始 WAV/CSV 及实验照（20 分） | `*-15/`、`experiment_log.csv`、`实验照索引.md`、`day*.jpg`、`*.png`、`*.mp4` | 齐；摩擦/失衡只有设备本体照 |
-| ② 时域/频域特征提取代码（20 分） | `analyze_real_wav.py`、`tools/signal_core.py`、`results/features.csv`、`spectrum_compare.svg` | 已跑通 75 段 |
+| ② 时域/频域特征提取代码（20 分） | `analyze_real_wav.py`、`analyze_acoustic_limits.py`、`tools/signal_core.py`、`results/features.csv`、`spectrum_compare.svg` | 已跑通 75 段 |
 | ③ 盲测准确率视频与抗噪报告（20 分） | `results/loo_report.md`、`blind_report.md`、`blind_report_round2.md`、`noise_robustness.md`、`noise_robustness_round2.md`、`blind_test/` | 视频（第一轮实时录屏）、两轮盲测、两轮抗噪、消融齐 |
+| 补充分析（不计分，界定结论边界） | `results/acoustic_band_limits.md`、`envelope_experiment.md` | 频带覆盖 + 包络负结果 |
 | 跨多日过程数据 | `../process_logs/` 15 份 + Git 提交历史 + `../AI使用报告/` | 齐 |
 
 逐条对照见 [交付清单.md](./交付清单.md)；录屏步骤见 [blind_test/README.md](./blind_test/README.md)。

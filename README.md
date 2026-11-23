@@ -54,6 +54,8 @@
 | 项目三盲测（两轮） | 第一轮 **80.0%**（12/15）· 第二轮 **93.3%**（14/15），盲测段互斥 | [`盲测两轮对比说明.md`](./02_Stage2_Project_Vibration/results/盲测两轮对比说明.md) |
 | 项目三抗噪（两轮） | 30 → 0 dB：第一轮 88.0%→48.0%，第二轮 96.0%→48.0%；**两轮拐点均 5 dB** | [`noise_robustness_round2.md`](./02_Stage2_Project_Vibration/results/noise_robustness_round2.md) |
 | 特征消融 | `crest` 最关键（+4.0 pp），`dominant_hz` 冗余（−2.7 pp） | [`feature_ablation.md`](./02_Stage2_Project_Vibration/results/feature_ablation.md) |
+| 声学通道边界 | 100 Hz 以下 1.5%、5 kHz 以上 56.0% 能量；1× 转频 100–155 Hz 可观测，<100 Hz 结构振动不可观测 | [`acoustic_band_limits.md`](./02_Stage2_Project_Vibration/results/acoustic_band_limits.md) |
+| 包络解调试验 | 89.3% → 89.3%（+0.0 pp），仅包络 42.7%；**负结果，未采纳** | [`envelope_experiment.md`](./02_Stage2_Project_Vibration/results/envelope_experiment.md) |
 
 数字口径：课题 08 的 88.3% 衡量同次采集窗口可分性（偏乐观），63.3% 为留一整份源文件结果（更接近泛化）。项目三盲测两轮相差 13.3 pp，差异来自「哪 3 段被留出」而非模型变化；抗噪两轮拐点一致但绝对值相差 8–11 pp，说明单轮 25 段的抽样误差不可忽略。上述差异均写入对应报告，不取单次最优值对外表述。
 
@@ -79,6 +81,10 @@
 
 ![五种工况平均幅度谱](./02_Stage2_Project_Vibration/results/spectrum_compare.svg)
 
+**项目三 · 声学通道能量频带分布**（低频几乎听不到，是「不能给振级」的直接证据）：
+
+![五工况能量频带分布](./02_Stage2_Project_Vibration/results/acoustic_band_limits.svg)
+
 ## 六、目录结构
 
 ```
@@ -95,10 +101,10 @@ project-03-vibration-diagnosis/
 │   └── results/                  06_*（含五套场所方案）/ 08_* 图表与报告；archive_1116/ 迭代证据
 └── 02_Stage2_Project_Vibration/
     ├── README.md · protocol.md · experiment_log.csv · 交付清单.md · 实验照索引.md
-    ├── analyze_real_wav.py
+    ├── analyze_real_wav.py · analyze_acoustic_limits.py
     ├── low-15/ high-15/ friction-15/ block-15/ imbalance-15/   75 段 WAV
     ├── blind_test/               盲测演示.html + 录屏指引 + 明细 + 视频
-    ├── results/                  features.csv / 频谱图 / 报告 / 抗噪曲线 / 消融 / 混淆矩阵
+    ├── results/                  features.csv / 频谱图 / 报告 / 抗噪曲线 / 消融 / 混淆矩阵 / 频带边界 / 包络试验
     └── *.png · *.mp4 · day*.jpg  分贝报告、演示视频、现场照
 ```
 
@@ -124,7 +130,7 @@ project-03-vibration-diagnosis/
 - **无效样本**：课题 08 快跑旧版（3.88 s）判无效，文件由本人移除，数值与判定理由以文字留存；11/19 重采后纳入。
 - **时间依据**：分贝报告以 App「检测时间」为准，逐张与现场水印核对；App 场景标签为模板文案，不作点位依据。
 - **归位规则**：标准 15 格由 `tools/build_standard_grid.py` 按四条事先声明规则归位（时段窗口、点位对应、同格择优、数值不加工），与声级高低无关。
-- **局限**：跨日 held-out 0/15、加速度通道未采、课题 08 每类仅一次采集；均已标注，不补造数据。
+- **局限**：跨日 held-out 0/15、加速度通道未采（已量化边界：100 Hz 以下仅 1.5% 能量）、课题 08 每类仅一次采集；均已标注，不补造数据。
 - **AI 使用**：允许并鼓励 AI 辅助编码与排障，记录见 `AI使用报告/` 与 `AI_Chat_Log.md`；数据、结论与代码均经本人核对。
 
 ## 九、逐日完成记录
@@ -159,9 +165,11 @@ python 01_Stage1_Field_Measurement\analyze_noise.py
 python 01_Stage1_Field_Measurement\analyze_gait.py
 python 02_Stage2_Project_Vibration\analyze_real_wav.py --all
 python 02_Stage2_Project_Vibration\analyze_real_wav.py --blind2 --noise2
+python 02_Stage2_Project_Vibration\analyze_acoustic_limits.py --all
 python tools\make_blind_demo.py
 python 02_Stage2_Project_Vibration\analyze_real_wav.py --check
 python tools\normalize_text.py
 ```
 
 `analyze_gait.py --demo` 的合成产物写入系统临时目录，不进仓库。
+`analyze_acoustic_limits.py --all` 做 48 kHz 全频带 FFT 与包络解调，约 7 分钟；只调图形版式用 `--charts` / `--envcharts`。
