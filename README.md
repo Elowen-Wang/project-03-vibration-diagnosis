@@ -25,7 +25,7 @@
 | 第二阶段项目三完整报告 | [02_Stage2_Project_Vibration/README.md](./02_Stage2_Project_Vibration/README.md) · [交付清单](./02_Stage2_Project_Vibration/交付清单.md) · [实验照索引](./02_Stage2_Project_Vibration/实验照索引.md) · [工况定义](./02_Stage2_Project_Vibration/protocol.md) |
 | 盲测演示 | [盲测演示页](./02_Stage2_Project_Vibration/blind_test/盲测演示.html) · [录屏指引](./02_Stage2_Project_Vibration/blind_test/README.md) · [15 段明细](./02_Stage2_Project_Vibration/blind_test/blind_detail.csv) |
 | AI 使用报告 | [AI使用报告/README.md](./AI使用报告/README.md) · [文字索引](./AI_Chat_Log.md) |
-| 过程日志 | [process_logs/README.md](./process_logs/README.md)（14 份） |
+| 过程日志 | [process_logs/README.md](./process_logs/README.md)（15 份） |
 | 任务表 | [DAILY_PLAN.md](./DAILY_PLAN.md) |
 | 提交操作指引 | [提交指引.md](./提交指引.md)（11/24 23:59 截止） |
 
@@ -46,7 +46,7 @@
 
 | 指标 | 数值 | 来源 |
 |---|---|---|
-| 课题 06 标准声学数据 | **15/15 格全满**；23 组独立实测，11 组超时段阈值（集中食堂与主干道） | [`06_summary.csv`](./01_Stage1_Field_Measurement/results/06_summary.csv) |
+| 课题 06 标准声学数据 | **15/15 格全满**；24 组独立实测（23 组纳入统计），11 组超时段阈值（食堂 3 · 主干道 6 · 实训室走廊 2） | [`06_summary.csv`](./01_Stage1_Field_Measurement/results/06_summary.csv) |
 | 课题 06 场所化光效 | 五套基线 **41 / 60 / 60 / 50 / 47 dB**；15 格回放绿 10 · 黄 3 · 橙 1 · 红 1 | [`06_alert_profiles.md`](./01_Stage1_Field_Measurement/results/06_alert_profiles.md) |
 | 课题 08 四类步态 | K 折 **88.3%** / 留一整份源文件 **63.3%** | [`08_threshold_rules.md`](./01_Stage1_Field_Measurement/results/08_threshold_rules.md) |
 | 项目三 WAV | 75 段（5 工况 × 15），48 kHz / 双声道 / 16 bit / 10.3–11.9 s | 脚本核验 |
@@ -85,7 +85,7 @@
 project-03-vibration-diagnosis/
 ├── README.md · DAILY_PLAN.md · AI_Chat_Log.md · 提交指引.md
 ├── AI使用报告/                   README + 三阶段截图 + 课题08核对报告.html
-├── process_logs/                 14 份日志 + README
+├── process_logs/                 15 份日志 + README
 ├── tools/                        signal_core.py · build_standard_grid.py · normalize_text.py · make_templates.py · make_blind_demo.py
 ├── 01_Stage1_Field_Measurement/
 │   ├── README.md · noise_log.csv
@@ -95,7 +95,7 @@ project-03-vibration-diagnosis/
 │   └── results/                  06_*（含五套场所方案）/ 08_* 图表与报告；archive_1116/ 迭代证据
 └── 02_Stage2_Project_Vibration/
     ├── README.md · protocol.md · experiment_log.csv · 交付清单.md · 实验照索引.md
-    ├── analyze_real_wav.py · fft_feature_extraction.py
+    ├── analyze_real_wav.py
     ├── low-15/ high-15/ friction-15/ block-15/ imbalance-15/   75 段 WAV
     ├── blind_test/               盲测演示.html + 录屏指引 + 明细 + 视频
     ├── results/                  features.csv / 频谱图 / 报告 / 抗噪曲线 / 消融 / 混淆矩阵
@@ -111,7 +111,7 @@ project-03-vibration-diagnosis/
 | ① 5 工况 × 15 组原始 WAV/CSV 及实验照（20 分） | `*-15/` 75 段 WAV、`experiment_log.csv`、`day*.jpg`、`*.png`、`*.mp4`、`实验照索引.md` | 数据齐；摩擦/失衡只有设备本体照（已标注） |
 | ② 时域/频域特征提取代码（20 分） | `analyze_real_wav.py`、`tools/signal_core.py`、`results/features.csv`、`spectrum_compare.svg` | 已跑通 75 段 |
 | ③ 盲测准确率视频与抗噪报告（20 分） | `results/loo_report.md`、`blind_report.md`、`noise_robustness.md`、`feature_ablation.md`、`blind_test/` | 视频、抗噪报告、消融分析齐 |
-| 跨多日过程数据 | `process_logs/` 14 份、Git 提交历史、`AI使用报告/` | 齐 |
+| 跨多日过程数据 | `process_logs/` 15 份、Git 提交历史、`AI使用报告/` | 齐 |
 | `03-AI-Collaboration` | `AI使用报告/` 截图 + HTML 核对报告 + `AI_Chat_Log.md` | 齐 |
 
 **第一阶段 20 分**：`noise_log.csv`（标准格 15/15 + 8 组佐证）、`results/06_*`、`课题08/` 5 组 CSV、`results/08_*`、`AI使用报告/第一阶段/课题08核对报告.html`；逐条见 [交付清单](./01_Stage1_Field_Measurement/课题08/交付清单.md)。

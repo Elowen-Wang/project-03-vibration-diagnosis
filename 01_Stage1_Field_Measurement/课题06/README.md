@@ -2,7 +2,7 @@
 
 **设备**：OPPO Reno 15 ＋「分贝仪噪音检测 PLW110」App（导出含 GPS 地点、检测时间、min/max/avg 的报告）
 **现场证据**：水印相机 JPG + MP4（含日期、时刻、地点），与报告 PNG 按文件名对应
-**采集日期**：11-04、11-05、11-13、11-18、11-19、11-20
+**采集日期**：11-04、11-05、11-13、11-18、11-19、11-20、11-23
 **项目起点**：11-01（项目三目录测得低速/高速/受阻三份报告，见第四节）
 
 > `noise_log.csv` 的 `photo` / `report_png` 两列统一写成 `课题06/xxx` 路径。
@@ -114,7 +114,7 @@ App 报告自动生成的场景描述（食堂写「汽车穿梭在马路上」�
 
 ## 四、标准 15 格归位
 
-`../noise_log.csv` 中 `N01–N15` 为标准格，`R01` 为对照格（未测）。归位由 [tools/build_standard_grid.py](../../tools/build_standard_grid.py) 完成，四条规则：
+`../noise_log.csv` 中 `N01–N15` 为标准格（15 格全部有实测值），`H01–H20` 与 `H05L` 为 21 组实测记录（12 组已归入标准格，9 组作佐证或排障样本）。归位由 [tools/build_standard_grid.py](../../tools/build_standard_grid.py) 完成，四条规则：
 
 | 规则 | 内容 |
 |---|---|
@@ -171,7 +171,7 @@ python 01_Stage1_Field_Measurement\analyze_noise.py    :: 出图 + 光效逻辑
 | 午 | 42 | 58 | 59 | 48 | 59 |
 | 晚 | 40 | 62 | 59 | 47 | 38 |
 
-超标集中在食堂与主干道（三个时段全部超标）；实训室走廊与图书馆全天最安静。
+超标集中在食堂与主干道（两处三个时段全部超标）；实训室走廊仅午间下课人流时段超标，其余时段与图书馆同为全天最安静。
 
 ### 5.2 矩阵热力图
 
@@ -185,13 +185,13 @@ python 01_Stage1_Field_Measurement\analyze_noise.py    :: 出图 + 光效逻辑
 
 ![状态机仿真状态时间线](../results/06_alert_timeline.svg)
 
-阈值早/午 55 dB、晚 50 dB；四态 `QUIET 绿常亮 → NORMAL 蓝常亮 → WARN 黄慢闪 1 Hz → ALERT 红快闪 2 Hz + 蜂鸣`；升级连续 3 帧确认、降级连续 5 帧确认、3 dB 滞回带防抖。完整说明见 [results/06_alert_logic.md](../results/06_alert_logic.md)。
+阈值不以跨场所统一的绝对声级判定，改以**该场所早/午/晚实测均值为基线 B**（图书馆 41、食堂 60、主干道 60、运动场 50、实训室走廊 47 dB），叠加 +3 / +8 / +12 dB 三档偏移；四档光效 `NORMAL 绿常亮 → WATCH 黄常亮 → WARN 橙慢闪 1 Hz → ALERT 红快闪 2 Hz + 蜂鸣`，瞬时峰值 ≥ B+12 dB 时红灯闪一次并记录、不改变主状态；升级连续 3 帧确认、降级连续 5 帧确认、3 dB 滞回带防抖。15 格回放为绿 10 · 黄 3 · 橙 1 · 红 1。逐场所方案见 [results/06_alert_profiles.md](../results/06_alert_profiles.md)，完整逻辑见 [results/06_alert_logic.md](../results/06_alert_logic.md)，实现见 `analyze_noise.py` 的 `LightAlertFSM`。
 
 ### 5.4 产物清单
 
 | 文件 | 内容 |
 |---|---|
-| `../results/06_summary.csv` | 23 次独立实测汇总、超标判定、限值 |
+| `../results/06_summary.csv` | 23 组纳入统计的实测汇总、超标判定、限值 |
 | `../results/06_noise_bars.svg` | 各记录平均声级柱状图 |
 | `../results/06_noise_radar.svg` | 5 点位 × 3 时段雷达图，15 格全有值 |
 | `../results/06_noise_matrix.svg` | 矩阵热力图，超标格红框 |

@@ -1,7 +1,6 @@
 """项目三 · 真实 WAV 声振特征提取与工况分类（零第三方依赖）
 
-与旧的 fft_feature_extraction.py 不同：本脚本读取仓库里真实的 75 段 WAV，
-不做任何模拟数据。用法（在仓库根目录执行）：
+本脚本读取仓库里真实的 75 段 WAV，不做任何模拟数据。用法（在仓库根目录执行）：
 
     python 02_Stage2_Project_Vibration\\analyze_real_wav.py --extract
     python 02_Stage2_Project_Vibration\\analyze_real_wav.py --all
@@ -126,7 +125,7 @@ def _report_pairs(pairs, title, out_md):
         tot = sum(m[i])
         lines.append(f"- {lab}：{m[i][i]}/{tot} = {(m[i][i] / tot * 100 if tot else 0):.0f}%")
     lines += ["", "> 分类器：标准化后的最近质心（nearest centroid），特征为 11 维时域+频域量。",
-              "> 全程使用 Python 标准库实现 FFT，未调用任何机器学习框架，便于面试逐行解释。", ""]
+              "> 全程使用 Python 标准库实现 FFT，未调用任何机器学习框架，便于逐行复核。", ""]
     core.write_text(RESULTS / f"{out_md}.md", "\n".join(lines) + "\n")
     print(f"{title}：准确率 {acc * 100:.1f}%  -> results/{out_md}.md")
     return acc
@@ -335,8 +334,8 @@ def step_blind2():
             f"- 第一轮错判：{fmt(err1)}",
             f"- 第二轮错判：{fmt(err2)}", "",
             common_txt, "",
-            "逐段明细：`blind_test/blind_detail.csv`（第一轮）、`blind_test/blind_report_round2.md` 与 "
-            "`blind_test/blind_detail_round2.csv`（第二轮）。", "",
+            "逐段明细：`../blind_test/blind_detail.csv`（第一轮）、`blind_report_round2.md` 与 "
+            "`../blind_test/blind_detail_round2.csv`（第二轮）。", "",
         ]),
         "两轮相差",
     )
@@ -570,7 +569,11 @@ def step_check():
     n_hist = (sum(1 for r in core.read_csv(noise)
                   if str(r.get("record_id", "")).startswith("H") and r.get("avg_db"))
               if noise.exists() else 0)
-    print(f"  [INFO] 课题06 历史/补测佐证 {n_hist} 组（不计入标准 15 组）")
+    n_grid_from_h = sum(1 for r in core.read_csv(noise)
+                        if str(r.get("record_id", "")).startswith("N")
+                        and "H" in str(r.get("source", ""))) if noise.exists() else 0
+    print(f"  [INFO] 课题06 H 记录 {n_hist} 组（{n_grid_from_h} 组已归入标准格，"
+          f"其余为佐证或排障样本，不重复计数）")
     stage1 = ROOT / "01_Stage1_Field_Measurement"
     gait_flat = list((stage1 / "gait_raw").glob("*.csv"))
     gait_dir = stage1 / "课题08"
@@ -597,8 +600,9 @@ def step_check():
     if invalid:
         print("  [PENDING] 存在时长<12s 的步态样本，待重采后在 analyze_gait.py 自动纳入")
     logs = list((ROOT / "process_logs").glob("2026-*.md"))
-    print(f"  [{'OK' if len(logs) >= 8 else 'MISSING'}] 日志模板 {len(logs)}/8（文件存在 ≠ 当天已填写，请逐日确认）")
-    if len(logs) < 8:
+    print(f"  [{'OK' if len(logs) >= 11 else 'MISSING'}] 过程日志 {len(logs)} 份"
+          "（11/14、11/15、11/17 为空模板，如实留白）")
+    if len(logs) < 11:
         missing.append("process_logs 缺日志")
     for rel in ["README.md", "01_Stage1_Field_Measurement/README.md",
                 "02_Stage2_Project_Vibration/README.md", "AI_Chat_Log.md", "DAILY_PLAN.md",

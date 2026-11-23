@@ -299,7 +299,7 @@ def calibrate(train, cats=None, method="midpoint"):
 
 
 def classify(f, thr=None):
-    """可解释阈值规则：物理含义明确，便于面试逐条讲清楚。"""
+    """可解释阈值规则：物理含义明确，可逐条复核。"""
     t = thr or DEFAULT_THR
     if f["svm_mean"] < t["svm_static"]:
         return "静止"          # 合加速度几乎为零，手机未被携带运动

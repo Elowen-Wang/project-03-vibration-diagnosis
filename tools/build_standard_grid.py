@@ -156,9 +156,18 @@ def main() -> int:
     empty = [r["record_id"] for r in rows
              if r["record_id"].startswith("N") and not r["avg_db"]]
     print(f"仍为空的标准格（真实缺口，不补造）：{' '.join(empty) if empty else '无'}")
-    print(f"独立实测组数：{len(h_rows) + len(direct)} 组"
-          f"（H 记录 {len(h_rows)} + 标准格直采 {len(direct)}），"
-          f"其中 {len(filled)} 组已归入标准 15 格，其余 {len(h_rows) + len(direct) - len(filled)} 组为佐证")
+    # H04（11-05 图书馆，min 7 dB）为 App 启动爬升假值，保留原件但降级为排障样本，
+    # 不计入统计；其余记录每次实测只计数一次，不因归入标准格而重复。
+    abnormal = [r for r in h_rows
+                if "排障" in (r.get("source", "") + r.get("note", ""))]
+    n_meas = len(h_rows) + len(direct)
+    n_stat = n_meas - len(abnormal)
+    print(f"独立实测 {n_meas} 组（H 记录 {len(h_rows)} + 标准格直采 {len(direct)}）；"
+          f"纳入统计 {n_stat} 组"
+          + (f"（{len(abnormal)} 组启动假值仅作排障样本）" if abnormal else ""))
+    print(f"  其中 {len(filled)} 组已归入标准 15 格"
+          f"（H 来源 {len(filled) - len(direct)} + 直采 {len(direct)}），"
+          f"{n_stat - len(filled)} 组为独立佐证")
     return 0
 
 
