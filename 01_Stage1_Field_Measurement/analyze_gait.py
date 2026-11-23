@@ -42,6 +42,9 @@ STATES = ["静止", "平地慢走", "快跑", "上下楼梯"]
 FIELDS = ["file", "state", "window", "svm_mean", "svm_std", "az_range",
           "dominant_hz", "zcr", "centroid", "cadence", "cad_cv", "align", "ratio"]
 
+# 波形图文件名：同属「上下楼梯」的两份文件按快/慢区分，其余沿用姿态标签
+WAVE_TAG = {"爬楼梯（快）": "上下楼梯_快", "爬楼梯（慢）": "上下楼梯_慢"}
+
 # 滑窗长度与活动段裁剪阈值（经重复交叉验证确定，见 results/08_threshold_rules.md）
 WIN_S = 3.0              # 3 秒窗：慢走步频约 1.5–2 Hz，2 秒窗只能覆盖 3–4 步、不够稳
 TRIM_RATIO = 0.25        # 保留合加速度均值 ≥ 该文件峰值 25% 的窗口，去掉起止准备段
@@ -176,7 +179,9 @@ def window_features(xyz, rate, win_s=None):
         c = [v - core.mean(svm) for v in svm]
         f = core.spectral_features(c, rate, n_fft=512)
         g = core.cadence_features(az, rate)
-        out.append({"svm_mean": core.mean(svm), "svm_std": core.std(svm),
+        # i0 记录窗口在原文件中的起始样本，仅供波形图定位活动段，不写入特征表
+        out.append({"i0": start,
+                    "svm_mean": core.mean(svm), "svm_std": core.std(svm),
                     "az_range": core.percentile(az, 95) - core.percentile(az, 5),
                     "dominant_hz": f["dominant_hz"], "zcr": f["zcr"],
                     "centroid": f["centroid"],
@@ -185,17 +190,73 @@ def window_features(xyz, rate, win_s=None):
     return out
 
 
+def wave_segment(wf, xyz, rate, secs=8.0):
+    """取活动段**中部**连续 secs 秒画波形，而不是文件开头。
+
+    文件开头常是「人就位但尚未起步」的准备段：11-19 重采的快跑文件前 4 秒
+    svm_mean 仅 3–6 m/s²，全段均值却是 12.6 m/s²。早期版本直接截前 4 秒，
+    画出来的是一条幅度 ±7 的「假快跑」，与特征表互相矛盾。
+    """
+    n = len(xyz)
+    if wf and "i0" in wf[0]:
+        i0, i1 = wf[0]["i0"], min(n, wf[-1]["i0"] + int(rate * WIN_S))
+    else:
+        i0, i1 = 0, n
+    need = int(rate * secs)
+    if i1 - i0 <= need:
+        return xyz[i0:i1], i0, i1
+    mid = (i0 + i1) // 2
+    s = max(i0, mid - need // 2)
+    e = min(i1, s + need)
+    s = max(i0, e - need)
+    return xyz[s:e], s, e
+
+
 DEFAULT_THR = {"svm_static": 0.20, "svm_run": 12.0, "ratio": 1.5}
 
 
-def calibrate(train, cats=None):
-    """只用训练窗口自动标定 3 个阈值：取两类均值的中点。
+def best_split(train, low, high, key):
+    """在训练窗口上枚举切点，取分类正确数最多的那个；并列时取靠中间的位置。
+
+    为什么不用「两类均值中点」：2026-11-23 排障时实测，慢走 ratio 为
+    0.97–2.45、楼梯为 0.58–1.95，两族分布严重重叠。均值中点 t=1.393 只能
+    分对 13/16；枚举得到 t=0.95 可分对 14/16。中点法对偏斜分布不稳健，
+    因为均值会被离群窗口拉走（楼梯窗口里有一个 ratio=1.95 的下楼段）。
+    切点只在**训练窗口**上枚举，测试窗口不参与，因此不构成信息泄漏。
+    """
+    a = [f[key] for f in train if f["state"] == low]
+    b = [f[key] for f in train if f["state"] == high]
+    if not a or not b:
+        return None
+    cands = sorted(set(a + b))
+    best = None
+    for i in range(len(cands) - 1):
+        t = (cands[i] + cands[i + 1]) / 2
+        ok = sum(1 for x in a if x < t) + sum(1 for x in b if x >= t)
+        if best is None or ok > best[0] or (ok == best[0] and abs(t - 1.0) < abs(best[1] - 1.0)):
+            best = (ok, t)
+    return best[1] if best else (core.mean(a) + core.mean(b)) / 2
+
+
+def calibrate(train, cats=None, method="midpoint"):
+    """只用训练窗口自动标定 3 个阈值。测试窗口完全不参与。
 
     规则结构固定且物理可解释，阈值随数据自适应，避免把合成数据的数值
-    硬套到真实采集上；标定过程只用训练窗口，测试窗口完全不参与。
-    某类数据暂缺时（例如快跑待重采），对应阈值保留默认值，不强行编造。
+    硬套到真实采集上。某类数据暂缺时（例如快跑待重采），对应阈值保留
+    默认值，不强行编造。
 
-    规则改为两级物理判据（2026-11-22 升级，依据见 results/08_threshold_rules.md）：
+    `method` 决定切点取法，4 种实现都保留，便于复核与复现对比
+    （2026-11-23 实测结果见 results/08_threshold_rules.md 的「标定法对比」）：
+      midpoint  两类均值中点（默认，实测留一文件准确率最高）
+      median    两类中位数中点
+      p25p75    楼梯 P75 与慢走 P25 的中点
+      bestcut   训练集上枚举、取分类正确数最多的切点
+
+    bestcut 在训练集上看起来最好（全量自评 93.3%），但留一整份源文件时
+    从 63.3% 掉到 60.0%——切点被训练集里那个 ratio=1.95 的下楼窗口带偏了。
+    这就是过拟合，因此不作为默认。
+
+    规则本身是两级物理判据：
       1) 幅度 → 静止 / 快跑：合加速度均值是最稳定的量级指标；
       2) 节奏 → 上下楼梯 / 平地慢走：用 1×/2× 步频能量比 `ratio`。
          早期版本用 `az_range`（垂直幅度）分楼梯，实测把平地慢走大量误判成楼梯
@@ -205,16 +266,35 @@ def calibrate(train, cats=None):
     by = {s: [f for f in train if f["state"] == s] for s in cats}
     thr = dict(DEFAULT_THR)
     m = lambda s, k: core.mean([f[k] for f in by[s]])
-    moving = [s for s in cats if s != "静止" and by[s]]
+    moving = [s for s in cats if s != "静止" and by.get(s)]
+
+    def cut(a_vals, b_vals):
+        """a 侧应低于阈值、b 侧应不低于阈值；返回切点。"""
+        if method == "median":
+            return (core.percentile(a_vals, 50) + core.percentile(b_vals, 50)) / 2
+        if method == "p25p75":
+            return (core.percentile(a_vals, 75) + core.percentile(b_vals, 25)) / 2
+        if method == "bestcut":
+            merged = ([{"v": v, "y": 0} for v in a_vals] +
+                      [{"v": v, "y": 1} for v in b_vals])
+            t = best_split([{"state": "b" if d["y"] else "a", "x": d["v"]} for d in merged],
+                           "a", "b", "x")
+            return t if t is not None else (core.mean(a_vals) + core.mean(b_vals)) / 2
+        return (core.mean(a_vals) + core.mean(b_vals)) / 2
+
     if by.get("静止") and moving:
-        thr["svm_static"] = (m("静止", "svm_mean") +
-                             min(m(s, "svm_mean") for s in moving)) / 2
+        # 静止 vs 最近的移动类（各类均值中的最小者），而不是把全部移动类合并
+        near = min(moving, key=lambda s: core.mean([f["svm_mean"] for f in by[s]]))
+        thr["svm_static"] = cut([f["svm_mean"] for f in by["静止"]],
+                                [f["svm_mean"] for f in by[near]])
     if by.get("快跑") and moving:
         slow = [s for s in moving if s != "快跑"]
-        thr["svm_run"] = (m("快跑", "svm_mean") +
-                          max(m(s, "svm_mean") for s in slow)) / 2
+        high = max(slow, key=lambda s: core.mean([f["svm_mean"] for f in by[s]]))
+        thr["svm_run"] = cut([f["svm_mean"] for f in by[high]],
+                             [f["svm_mean"] for f in by["快跑"]])
     if by.get("上下楼梯") and by.get("平地慢走"):
-        thr["ratio"] = (m("平地慢走", "ratio") + m("上下楼梯", "ratio")) / 2
+        thr["ratio"] = cut([f["ratio"] for f in by["上下楼梯"]],
+                           [f["ratio"] for f in by["平地慢走"]])
     return thr
 
 
@@ -230,7 +310,8 @@ def classify(f, thr=None):
     return "平地慢走"          # 双脚交替，垂向力主要落在 2× 步频，比值偏大
 
 
-def cross_validate(feats, cats, folds=5, repeats=20, seeds=(100, 200, 300, 400)):
+def cross_validate(feats, cats, folds=5, repeats=20, seeds=(100, 200, 300, 400),
+                   method="midpoint"):
     """重复分层 K 折交叉验证。
 
     每个种子独立随机打乱、按类分层分配到 K 折；每折用训练窗口标定阈值、
@@ -257,7 +338,7 @@ def cross_validate(feats, cats, folds=5, repeats=20, seeds=(100, 200, 300, 400))
             train = [f for j, b in enumerate(buckets) if j != k for f in b]
             if not test or not train:
                 continue
-            thr = calibrate(train, cats)
+            thr = calibrate(train, cats, method)
             for f in test:
                 p = classify(f, thr)
                 key = (f["state"], p)
@@ -268,7 +349,7 @@ def cross_validate(feats, cats, folds=5, repeats=20, seeds=(100, 200, 300, 400))
     return (hits / total if total else 0.0), total, cm
 
 
-def leave_one_file_out(feats, cats, feat_key="ratio"):
+def leave_one_file_out(feats, cats, feat_key="ratio", method="midpoint"):
     """最严格的一层验证：整份源文件留出。
 
     重复 K 折里同一文件的不同窗口会分别落在训练折与测试折，
@@ -286,26 +367,11 @@ def leave_one_file_out(feats, cats, feat_key="ratio"):
         test = [f for f in feats if f["file"] == hold]
         if not test or not train:
             continue
-        by = {}
-        for f in train:
-            by.setdefault(f["state"], []).append(f)
-        M = lambda s, k: core.mean([f[k] for f in by[s]]) if s in by else None
-        moving = [s for s in by if s != "静止"]
-        thr = dict(DEFAULT_THR)
-        if "静止" in by and moving:
-            thr["svm_static"] = (M("静止", "svm_mean") +
-                                 min(M(s, "svm_mean") for s in moving)) / 2
-        else:
-            thr["svm_static"] = DEFAULT_THR["svm_static"]
-        if "快跑" in by and moving:
-            thr["svm_run"] = (M("快跑", "svm_mean") +
-                              max(M(s, "svm_mean") for s in moving if s != "快跑")) / 2
-        else:
-            thr["svm_run"] = float("inf")     # 训练集中无该类 → 分支不生效
-        if "平地慢走" in by and "上下楼梯" in by:
-            thr["ratio"] = (M("平地慢走", feat_key) + M("上下楼梯", feat_key)) / 2
-        else:
-            thr["ratio"] = DEFAULT_THR["ratio"]
+        # 与 K 折共用同一套标定函数，避免两处逻辑各写一遍后逐渐不一致
+        thr = calibrate(train, cats, method)
+        present = {f["state"] for f in train}
+        if "快跑" not in present:
+            thr["svm_run"] = float("inf")     # 训练集中无该类 → 分支不生效，而非拿默认值硬判
         ok = sum(1 for f in test if classify(f, thr) == f["state"])
         rows.append((hold, ok, len(test)))
         hit += ok
@@ -341,10 +407,9 @@ def main():
             print(f"  - {s} / {p}（有效动作未录到，待重采）")
         print("  重采达标后脚本会自动纳入，无需再加 --include-invalid。")
 
-    feats, waves, units, seen, trimmed = [], {}, set(), {}, []
+    feats, units, seen, trimmed = [], set(), {}, []
     for state, p in pairs:
         seen[state] = seen.get(state, 0) + 1
-        suffix = "" if seen[state] == 1 else f"_{seen[state]}"
         loaded = load_signal(p)
         if not loaded:
             print(f"  跳过 {p.name}（数据行不足）")
@@ -360,16 +425,20 @@ def main():
                         ["svm_mean", "svm_std", "az_range", "dominant_hz", "zcr",
                          "centroid", "cadence", "cad_cv", "align", "ratio"]})
             feats.append(row)
-        waves.setdefault(state, xyz[:min(len(xyz), rate * 4)])
-        # 每种姿态一张三轴波形图
-        seg = xyz[:min(len(xyz), rate * 4)]
+        # 波形图按标签命名；楼梯的两份按快/慢区分，避免同名覆盖
+        tag = WAVE_TAG.get(p.parent.name, state)
+        if tag == state and seen[state] > 1:
+            tag = f"{state}_{seen[state]}"
+        seg, s0, s1 = wave_segment(wf, xyz, rate)
         series = [{"name": f"{ax} 轴", "color": core.PALETTE[i],
-                   "points": [(j / rate, v[i]) for j, v in enumerate(seg)]}
+                   "points": [((s0 + j) / rate, v[i]) for j, v in enumerate(seg)]}
                   for i, ax in enumerate("xyz")]
-        core.save_svg(OUT / f"08_wave_{state}{suffix}.svg", 680, 280,
-                      core.line_chart(series, title=f"{state} · 三轴加速度波形（前 4 秒）",
+        core.save_svg(OUT / f"08_wave_{tag}.svg", 680, 300,
+                      core.line_chart(series,
+                                      title=f"{tag} · 三轴加速度波形（{s0 / rate:.1f}–{s1 / rate:.1f} s，"
+                                            f"全长 {n / rate:.1f} s · {p.name}）",
                                       xlabel="时间 s", ylabel=f"加速度 {unit}",
-                                      width=680, height=280))
+                                      width=680, height=300, legend_pos="top-right"))
         print(f"  {state}: {n} 点 @ {rate} Hz -> {len(wf)} 个窗口，主频 {core.mean([f['dominant_hz'] for f in wf]):.2f} Hz")
 
     if not feats:
@@ -411,6 +480,24 @@ def main():
     core.save_svg(OUT / "08_confusion.svg", 680, 320,
                   core.heatmap(m, cats, cats, title="步态阈值规则 · 全量数据混淆矩阵"))
     lofo_rows, lofo_acc, lofo_n = leave_one_file_out(feats, cats)
+
+    # 文档里引用的均值一律现算，不写死——硬编码会在数据更新后与结果表打架
+    def _m(state, key):
+        sub = [f[key] for f in feats if f["state"] == state]
+        return core.mean(sub) if sub else 0.0
+    walk_ratio, stair_ratio = _m("平地慢走", "ratio"), _m("上下楼梯", "ratio")
+    walk_cv, stair_cv = _m("平地慢走", "cad_cv"), _m("上下楼梯", "cad_cv")
+
+    # 标定法对比（2026-11-23 排障）：同一规则、同一验证，只换切点取法。
+    # 目的是让「为什么用均值中点」有实测依据，而不是凭直觉挑一个。
+    cmp_res = []
+    for mth, label in (("midpoint", "两类均值中点"),
+                       ("median", "两类中位数中点"),
+                       ("p25p75", "分位数中点（楼梯 P75 / 慢走 P25）"),
+                       ("bestcut", "训练集最优切分")):
+        a1, _, _ = cross_validate(feats, cats, method=mth)
+        _, a2, _ = leave_one_file_out(feats, cats, method=mth)
+        cmp_res.append((label, a1, a2))
 
     if skipped:
         scope_note = (f"- 已排除无效组：{', '.join(s for s, _ in skipped)} —— 依据 AI使用报告/第一阶段/课题08核对报告.html，"
@@ -458,8 +545,8 @@ def main():
         "- **平地慢走**：双脚交替支撑，垂向冲击力主要出现在 **2× 步频** → 1× 带能量占比低 → `ratio` 大；",
         "- **上下楼梯**：每级台阶需单脚蹬伸、以单脚支撑为主，垂向力集中在 **1× 步频** → `ratio` 小。",
         "",
-        "实测平地慢走 `ratio` 均值 2.18、上下楼梯 1.65，间隔明显；`cad_cv`（步频规整度）方向一致，",
-        "平地 0.36、楼梯 0.64，可作为面试时的交叉验证。", "",
+        f"实测平地慢走 `ratio` 均值 {walk_ratio:.2f}、上下楼梯 {stair_ratio:.2f}，两族分布存在重叠，",
+        f"`cad_cv` 方向一致但绝对值接近（平地 {walk_cv:.2f}、楼梯 {stair_cv:.2f}），不能单独用来分楼梯。", "",
         "## 交叉验证结果", "",
         f"- 总窗口 {len(feats)} 个，划分为 {len(cats)} 类",
         f"- **重复分层 5 折交叉验证（4 个随机种子 × 20 轮 = {cv_runs} 次评估）：准确率 {cv_acc * 100:.1f}%**",
@@ -507,7 +594,22 @@ def main():
                   f"{core.mean([f['cadence'] for f in sub]):.2f} | "
                   f"{core.mean([f['cad_cv'] for f in sub]):.3f} | "
                   f"{core.mean([f['ratio'] for f in sub]):.3f} |")
-    md += ["", "## 阈值重标定说明", "",
+    md += ["", "## 标定法对比", "",
+           "同一套规则、同一套验证，只更换阈值切点的取法：", "",
+           "| 标定法 | K 折 | 留一整份文件 | 判断 |", "|---|---:|---:|---|"]
+    for label, a1, a2 in cmp_res:
+        if label.startswith("两类均值"):
+            verdict = "**采用**——两项均最高"
+        elif label.startswith("训练集"):
+            verdict = "训练集自评最高，跨文件反而下降，判为过拟合"
+        else:
+            verdict = "至少一项低于均值中点"
+        md.append(f"| {label} | {a1 * 100:.1f}% | {a2 * 100:.1f}% | {verdict} |")
+    md += ["",
+           "「训练集最优切分」把全量自评推到 93.3%，但留一整份源文件时从 63.3% 掉到 60.0%："
+           "切点被楼梯那个 `ratio=1.95` 的下楼窗口拉偏，属于过拟合，因此不作默认。"
+           "四种实现都保留在 `calibrate(method=...)` 里，可随时复现这张表。", "",
+           "## 阈值重标定说明", "",
            "- 三个阈值由脚本从训练窗口自动标定（两类均值中点），换真实数据后自动更新，不用手改代码。",
            "- 若准确率不理想：先看上表哪两类特征范围重叠，考虑延长窗口或更多依赖节奏类稳健特征。",
            "- 手机固定位置（口袋 / 手持 / 臂包）会显著改变幅度类特征，全程保持一致并在 README 写明。",

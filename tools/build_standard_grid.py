@@ -43,9 +43,9 @@ CSV = ROOT / "01_Stage1_Field_Measurement" / "noise_log.csv"
 
 # 标准格 ← 来源实测记录。理由逐条写清，便于复核与答辩。
 GRID_RULES = {
-    "N01": ("H04", "11/05 11:50 图书馆一楼；午时段、图书馆点位无歧义；"
-                   "min 7dB 为 App 启动爬升假值不进统计，均值 41dB 与同点位 H01(下午 41dB) 互证；"
-                   "官网只要均值与峰值"),
+    "N01": ("H20", "11/23 12:19 图书馆；午时段、点位无歧义；min 38dB 曲线自 38dB 正常起步，"
+                   "无 App 启动爬升假值；探测时长 28s、均值 42dB，与同点位早 40dB / 晚 40dB 同量级互证。"
+                   "原 N01 来源 H04(11/05) min 7dB 为启动假值，已降级为排障样本，不再作为标准格来源"),
     "N02": ("H07", "11/18 12:40 百味园食堂；午时段、食堂点位无歧义"),
     "N03": ("H14", "11/20 12:31 主干道校内；午时段、主干道点位无歧义；"
                    "同格候选 H15(12:36 校外) min 18dB 为启动假值，按 R3 取本组"),
@@ -97,6 +97,12 @@ def main() -> int:
 
     if "grid_slot" not in head:
         head.append("grid_slot")
+
+    # 幂等：每次按当前规则重建归位关系。来源变更后（如 N01 由 H04 改为 H20）旧标记必须清掉，
+    # 否则被弃用的记录会残留 grid_slot，既误算佐证组数，也让台账自相矛盾。
+    for r in rows:
+        if r["record_id"].startswith("H"):
+            r["grid_slot"] = ""
 
     for rid, (src, why) in GRID_RULES.items():
         if rid not in by_id:

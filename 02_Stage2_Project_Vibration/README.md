@@ -11,11 +11,11 @@
 | 原始 WAV | **75 段**（5 工况 × 15），48 000 Hz / 双声道 / 16 bit / 10.42–11.90 s |
 | 特征维度 | 11 维（时域 4 + 频域 7） |
 | 留一法交叉验证 | **89.3%**（75 段） |
-| 同批次盲测 | **80.0%**（每工况 1–12 训练、13–15 盲测，15 段） |
+| 同批次盲测 | **80.0%**（第一轮）· **93.3%**（第二轮，盲测段互斥） |
 | 分类器 | 标准化 + 最近质心，纯 Python 标准库 |
 | 环境依赖 | 零第三方依赖 |
 
-盲测低于交叉验证源于 13–15 号与训练段的分布差异。跨日 held-out 未采集（0/15），不把同批次盲测记作 held-out。
+盲测两轮相差 13.3 pp：训练量相同（每工况 12 段），差异只来自「哪 3 段被留出」，说明每类 15 段时测试集选择本身带来约 ±7 pp 的波动。跨日 held-out 未采集（0/15），不把同批次盲测记作 held-out。
 
 ---
 
@@ -95,10 +95,14 @@ FFT 为迭代 radix-2 Cooley-Tukey 实现，加 Hann 窗、8192 点零填充。
 | `results/features.csv` | 75 行 × 11 维特征表 |
 | `results/spectrum_compare.svg` | 五工况平均幅度谱（0–1000 Hz） |
 | `results/loo_report.md` / `.svg` | 留一法 89.3% + 混淆矩阵 + 每类召回 |
-| `results/blind_report.md` / `.svg` | 同批次盲测 80.0% + 混淆矩阵 |
-| `results/noise_robustness.md` / `.svg` | 抗噪曲线、分档准确率 |
+| `results/blind_report.md` / `.svg` | 第一轮盲测 80.0% + 混淆矩阵 |
+| `results/blind_report_round2.md` | 第二轮盲测 93.3%（1–3 号盲测、4–15 号训练） |
+| `results/盲测两轮对比说明.md` | 两轮对照、差异成因、错判方向 |
+| `results/noise_robustness.md` / `.svg` | 第一轮抗噪曲线、分档准确率 |
+| `results/noise_robustness_round2.md` / `.svg` | 第二轮抗噪：换抽样段 + 3 次重复加噪，两轮曲线对比 |
 | `results/feature_ablation.md` / `.svg` | 11 维特征逐个屏蔽后的留一法准确率 |
-| `blind_test/blind_detail.csv` · `盲测演示.html` | 15 段盲测逐条明细 + 演示页（12/15 = 80.0%） |
+| `blind_test/blind_detail.csv` · `盲测演示.html` | 第一轮 15 段明细 + 演示页（12/15 = 80.0%，视频即此轮实时录屏） |
+| `blind_test/blind_detail_round2.csv` | 第二轮 15 段明细（14/15 = 93.3%） |
 
 ### 五工况幅度谱
 
@@ -116,9 +120,14 @@ FFT 为迭代 radix-2 Cooley-Tukey 实现，加 Hann 窗、8192 点零填充。
 
 | SNR | 30 dB | 20 dB | 15 dB | 10 dB | 5 dB | 0 dB |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|
-| 准确率 | 88.0% | 84.0% | 84.0% | 80.0% | 64.0% | 48.0% |
+| 第一轮（1/4/7/10/13 段，单次加噪） | 88.0% | 84.0% | 84.0% | 80.0% | 64.0% | 48.0% |
+| 第二轮（2/5/8/11/14 段，3 次均值） | 96.0% | 94.7% | 92.0% | 89.3% | 66.7% | 48.0% |
 
-10 dB 以上基本稳定（≥80%），5 dB 开始明显退化，0 dB 接近随机。现场噪声大时需靠近声源（3–5 cm）、加防风罩、多帧投票，或改用频带能量比等相对特征。抗噪下混淆最多的是「进风遮挡 → 正常高速」。
+第二轮换用另一组抽样段，并对每个信噪比重复 3 次不同随机种子的加噪。两轮结论：
+
+- **拐点一致**：都在 5 dB 开始明显退化（相对干净基线下降 ≥10 pp），0 dB 均降到 48%，趋近五分类随机水平。
+- **绝对值不稳定**：同一信噪比下两轮相差 8–11 pp，远大于 3 次重复的随机波动（最大标准差 1.9 pp）。即抽样段的影响大于加噪随机性的影响——单轮 25 段的结论不能当成精确值报。
+- 现场噪声大时需靠近声源（3–5 cm）、加防风罩、多帧投票，或改用频带能量比等相对特征。
 
 ![抗噪鲁棒性曲线](./results/noise_robustness.svg)
 
@@ -215,7 +224,7 @@ python 02_Stage2_Project_Vibration\analyze_real_wav.py --check
 |---|---|---|
 | ① 5 工况 × 15 组原始 WAV/CSV 及实验照（20 分） | `*-15/`、`experiment_log.csv`、`实验照索引.md`、`day*.jpg`、`*.png`、`*.mp4` | 齐；摩擦/失衡只有设备本体照 |
 | ② 时域/频域特征提取代码（20 分） | `analyze_real_wav.py`、`tools/signal_core.py`、`results/features.csv`、`spectrum_compare.svg` | 已跑通 75 段 |
-| ③ 盲测准确率视频与抗噪报告（20 分） | `results/loo_report.md`、`blind_report.md`、`noise_robustness.md`、`blind_test/` | 视频、抗噪报告、消融齐 |
+| ③ 盲测准确率视频与抗噪报告（20 分） | `results/loo_report.md`、`blind_report.md`、`blind_report_round2.md`、`noise_robustness.md`、`noise_robustness_round2.md`、`blind_test/` | 视频（第一轮实时录屏）、两轮盲测、两轮抗噪、消融齐 |
 | 跨多日过程数据 | `../process_logs/` 14 份 + Git 提交历史 + `../AI使用报告/` | 齐 |
 
 逐条对照见 [交付清单.md](./交付清单.md)；录屏步骤见 [blind_test/README.md](./blind_test/README.md)。

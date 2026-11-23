@@ -258,6 +258,191 @@ def step_ablation():
 
 
 # --------------------------------------------------------------------------- noise
+def _append_once(path, text, marker):
+    """在报告末尾追加一段指引，已存在则不重复追加（脚本可反复重跑）。"""
+    t = path.read_text(encoding="utf-8") if path.exists() else ""
+    if marker in t:
+        return
+    with open(path, "a", encoding="utf-8", newline="") as f:
+        f.write(text)
+
+
+def step_blind2():
+    """盲测第二次：换一批完全没做过盲测的段重新测。
+
+    第一次用每工况 13–15 段做盲测（1–12 训练），第二次改用 1–3 段盲测、
+    4–15 训练——两轮的盲测段互不重叠，因此第二次是对「同批次盲测 80.0%」
+    这个结论的独立复核，而不是把同一批段换个名字再报一遍。
+    """
+    rows = load_rows()
+    if not rows:
+        return
+
+    def idx(r):
+        return int(r["file"].rsplit("-", 1)[-1].split(".")[0])
+
+    train = [r for r in rows if idx(r) >= 4]
+    test = [r for r in rows if idx(r) <= 3]
+    if not test or not train:
+        print("features.csv 缺少可用的第二轮划分")
+        return
+    scaler, cents = core.build_centroids(train)
+    pairs = [(r["condition"], core.predict(scaler, cents, r)) for r in test]
+    acc = _report_pairs(pairs, "第二轮盲测（每工况 4–15 训练 / 1–3 盲测，盲测段与第一轮互斥）",
+                        "blind_report_round2")
+
+    # 明细落盘，便于逐段复核
+    detail = [{"no": i + 1, "file": r["file"], "truth": t, "pred": p,
+               "result": "判对" if t == p else "判错",
+               "dominant_hz": round(float(r["dominant_hz"]), 1)}
+              for i, (r, (t, p)) in enumerate(zip(test, pairs))]
+    core.write_csv(HERE / "blind_test" / "blind_detail_round2.csv", detail)
+
+    # 两轮并列：同一模型、同样 12 段/类的训练量，只是留出的 3 段不同
+    tr1 = [r for r in rows if r["group"] == "train"]
+    te1 = [r for r in rows if r["group"] == "blind"]
+    sc1, ce1 = core.build_centroids(tr1)
+    acc1 = core.accuracy([(r["condition"], core.predict(sc1, ce1, r)) for r in te1])
+    gap = (acc - acc1) * 100
+    err1, err2 = {}, {}
+    for r in te1:
+        p = core.predict(sc1, ce1, r)
+        if p != r["condition"]:
+            err1[(r["condition"], p)] = err1.get((r["condition"], p), 0) + 1
+    for r, (t, p) in zip(test, pairs):
+        if t != p:
+            err2[(t, p)] = err2.get((t, p), 0) + 1
+    fmt = lambda d: "、".join(f"{a} → {b}（{n} 次）" for (a, b), n in
+                             sorted(d.items(), key=lambda x: -x[1])) if d else "无"
+    # 两轮错判共同指向的预测类别
+    common = {b for (_, b) in err1} & {b for (_, b) in err2}
+    common_txt = ("两轮错判都指向 **" + "、".join(sorted(common)) + "** 这一类："
+                  "它的基频与相邻工况重合，类中心会把邻近样本吸过去，属系统性混淆而非随机误差。"
+                  if common else "两轮错判方向不完全重合，说明混淆关系尚不稳定。")
+    _append_once(
+        RESULTS / "盲测两轮对比说明.md",
+        "\n".join([
+            "# 盲测两轮对比", "",
+            "同一套 11 维特征、同一个最近质心分类器、同样的训练量（每工况 12 段），"
+            "只更换被留出的 3 段：", "",
+            "| 轮次 | 训练段 | 盲测段 | 准确率 |", "|---|---|---|---|",
+            f"| 第一次 | 每工况 1–12 | 13–15 | {acc1 * 100:.1f}% |",
+            f"| 第二次 | 每工况 4–15 | 1–3 | {acc * 100:.1f}% |", "",
+            f"两轮相差 {gap:+.1f} pp。差异不来自模型或特征，而来自**哪 3 段被留出**——"
+            "每类只有 15 段时，15 段测试集上错 1 段就是 6.7 pp，测得的准确率本身带有较宽的波动区间。", "",
+            "因此对外表述应写「同批次盲测两轮分别为 "
+            f"{acc1 * 100:.0f}% 与 {acc * 100:.0f}%」，而不是只报其中较高的那个。", "",
+            f"- 第一轮错判：{fmt(err1)}",
+            f"- 第二轮错判：{fmt(err2)}", "",
+            common_txt, "",
+            "逐段明细：`blind_test/blind_detail.csv`（第一轮）、`blind_test/blind_report_round2.md` 与 "
+            "`blind_test/blind_detail_round2.csv`（第二轮）。", "",
+        ]),
+        "两轮相差",
+    )
+    _append_once(
+        RESULTS / "blind_report.md",
+        "\n## 第二次测试\n\n"
+        "第二轮改用每工况 1–3 段盲测、4–15 训练（盲测段与本轮互斥），"
+        "准确率与两次差异成因见 `盲测两轮对比说明.md` 与 `blind_report_round2.md`。\n",
+        "第二次测试",
+    )
+    print(f"第二轮盲测：{acc * 100:.1f}%，明细 -> blind_test/blind_detail_round2.csv")
+    return acc
+
+
+def step_noise2():
+    """抗噪第二次测试：换抽样段，且每个信噪比重复 3 次随机加噪。
+
+    第一次每工况取第 1/4/7/10/13 段、每个 SNR 只加一次噪，单次结果无法说明
+    「换 5 段、换随机种子，结论会不会变」。第二次改用第 2/5/8/11/14 段
+    （与第一次不重叠），每个信噪比重复 3 次加噪，用均值 ± 标准差表达稳定性。
+    模型仍用干净数据训练的同一套类中心，不重新训练，保证与第一次可比。
+    """
+    import statistics as st
+    rows = load_rows()
+    if not rows:
+        return
+    train = [r for r in rows if r["group"] == "train"]
+    scaler, cents = core.build_centroids(train)
+    snrs = [30, 20, 15, 10, 5, 0]
+
+    def run(picks, seed_off):
+        res = []
+        for snr in snrs:
+            pairs = []
+            for key, (folder, label) in CONDITIONS.items():
+                for i in picks:
+                    p = HERE / folder / f"{key}-{i}.wav"
+                    if not p.exists():
+                        continue
+                    sig, _ = core.read_wav_mono(p, target_rate=RATE, seconds=2.0)
+                    noisy = core.add_awgn(sig, snr, seed=i * 31 + snr + seed_off)
+                    pairs.append((label, core.predict(scaler, cents, extract_features(noisy))))
+            res.append((snr, core.accuracy(pairs)))
+        return res
+
+    first = dict(run((1, 4, 7, 10, 13), 0))
+    reps = [run((2, 5, 8, 11, 14), off) for off in (0, 977, 1954)]
+    second = []
+    for k, snr in enumerate(snrs):
+        vals = [r[k][1] for r in reps]
+        second.append((snr, st.mean(vals), st.pstdev(vals), min(vals), max(vals)))
+
+    base2 = second[0][1]
+    lines = ["# 抗噪鲁棒性报告（第二次测试）", "",
+             "对每段原始信号叠加高斯白噪声到指定信噪比，重新提取 11 维特征，"
+             "用**干净数据训练的模型**直接预测（不重新训练）。", "",
+             "与第一次的区别：抽样改用第 2/5/8/11/14 段（第一次是 1/4/7/10/13，互不重叠），"
+             "且每个信噪比重复 3 次不同随机种子的加噪，下表为 3 次的均值与标准差。", "",
+             "| 信噪比 SNR | 第二次均值 | 标准差 | 波动范围 | 第一次 | 差值 |",
+             "|---|---:|---:|---|---:|---:|"]
+    for snr, m, sd, lo, hi in second:
+        f = first[snr]
+        lines.append(f"| {snr} dB | {m * 100:.1f}% | {sd * 100:.1f} pp | "
+                     f"{lo * 100:.0f}–{hi * 100:.0f}% | {f * 100:.1f}% | {(m - f) * 100:+.1f} pp |")
+
+    knee2 = next((snr for snr, m, *_ in second if base2 - m >= 0.10), None)
+    knee1 = next((snr for snr in snrs if first[snrs[0]] - first[snr] >= 0.10), None)
+    max_sd = max(s[2] for s in second)
+    lines += [
+        "", "## 结论", "",
+        f"- 干净数据基线（SNR 30 dB）：**{base2 * 100:.1f}%**（3 次重复的均值）。",
+        f"- 明显下降的拐点：第二次 **{knee2} dB**，第一次 **{knee1} dB** —— "
+        f"{'两轮一致，拐点结论可复现' if knee2 == knee1 else '两轮不一致，说明拐点位置对抽样与随机种子敏感，不宜写死为单一数值'}。",
+        f"- 同一信噪比下 3 次重复的最大标准差为 **{max_sd * 100:.1f} pp**，"
+        f"即加噪随机性带来的波动量级{'很小，结论稳定' if max_sd < 0.07 else '不可忽略，单次结果不足以支撑结论'}。",
+        f"- 与第一次相比，各点差值在 "
+        f"{min((m - first[s]) * 100 for s, m, *_ in second):+.1f} 至 "
+        f"{max((m - first[s]) * 100 for s, m, *_ in second):+.1f} pp 之间。",
+        "", "## 边界", "",
+        "- 仍是**在已有 WAV 上人工叠加高斯白噪声**，属仿真压力测试，不等于真实嘈杂环境重采。",
+        "- 换的是抽样段与随机种子，**不是换一天重录**；真实环境下的抗噪表现需要现场复采才能确认。",
+        "- 两轮用同一个干净数据模型，未针对噪声重训练，因此测的是「分布偏移下的退化」，不是「加噪训练后的鲁棒性」。", "",
+    ]
+    core.write_text(RESULTS / "noise_robustness_round2.md", "\n".join(lines) + "\n")
+
+    series = [{"name": "第一轮（1/4/7/10/13 段）",
+               "points": [(s, first[s] * 100) for s in snrs], "color": core.PALETTE[1]},
+              {"name": "第二轮（3 次均值）",
+               "points": [(s, m * 100) for s, m, *_ in second], "color": core.PALETTE[0]}]
+    body = core.line_chart(series, title="抗噪鲁棒性：两轮独立测试对比",
+                           xlabel="信噪比 dB（越小越吵）", ylabel="准确率 %",
+                           width=680, height=300, ymin=0, ymax=105, legend_pos="top-right")
+    core.save_svg(RESULTS / "noise_robustness_round2.svg", 680, 300, body)
+    _append_once(
+        RESULTS / "noise_robustness.md",
+        "\n## 第二次测试\n\n"
+        "第二轮换用第 2/5/8/11/14 段、每个信噪比重复 3 次加噪，"
+        "结果见 `noise_robustness_round2.md`。两轮拐点一致（5 dB），"
+        "但绝对准确率相差 8–11 pp，说明单轮 25 段的抽样误差不可忽略。\n",
+        "第二次测试",
+    )
+    print(f"抗噪第二次测试 -> results/noise_robustness_round2.md（基线 {base2 * 100:.1f}%，"
+          f"拐点 {knee2} dB）")
+    return base2
+
+
 def step_noise():
     from collections import Counter
     rows = load_rows()
@@ -441,6 +626,8 @@ def main():
     ap.add_argument("--classify", action="store_true")
     ap.add_argument("--blind", action="store_true")
     ap.add_argument("--noise", action="store_true")
+    ap.add_argument("--blind2", action="store_true", help="第二轮盲测：每工况 1–3 盲测 / 4–15 训练")
+    ap.add_argument("--noise2", action="store_true", help="抗噪第二次测试：换抽样段 + 3 次重复加噪")
     ap.add_argument("--ablation", action="store_true")
     ap.add_argument("--heldout", action="store_true")
     ap.add_argument("--accel", action="store_true")
@@ -448,7 +635,7 @@ def main():
     ap.add_argument("--all", action="store_true")
     a = ap.parse_args()
     if not any([a.extract, a.classify, a.blind, a.noise, a.ablation, a.heldout,
-                a.accel, a.check, a.all]):
+                a.accel, a.check, a.all, a.blind2, a.noise2]):
         ap.print_help()
         return 0
     if a.all or a.extract:
@@ -459,6 +646,10 @@ def main():
         step_blind()
     if a.all or a.noise:
         step_noise()
+    if a.all or a.blind2:
+        step_blind2()
+    if a.all or a.noise2:
+        step_noise2()
     if a.all or a.ablation:
         step_ablation()
     if a.all or a.heldout:

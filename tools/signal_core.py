@@ -338,15 +338,43 @@ def _nice_bounds(vals):
     return lo - pad, hi + pad
 
 
+def _nice_step(span, target=4):
+    """取 1/2/2.5/5 × 10^k 作为刻度步长，避免出现 0.57、-5.8 这类读不出的刻度值。"""
+    if span <= 0:
+        return 1.0
+    raw = span / max(target, 1)
+    mag = 10 ** math.floor(math.log10(raw))
+    for m in (1, 2, 2.5, 5, 10):
+        if raw <= m * mag:
+            return m * mag
+    return 10 * mag
+
+
 def line_chart(series, title="", xlabel="", ylabel="", width=680, height=280,
-               ymin=None, ymax=None, legend=True):
-    """series: [{'name':str,'points':[(x,y)...],'color':str}, ...]"""
-    L, R, T, B = 62, 20, 44 if title else 20, 48
+               ymin=None, ymax=None, legend=True, legend_pos="bottom"):
+    """series: [{'name':str,'points':[(x,y)...],'color':str}, ...]
+
+    legend_pos="top-right" 时图例画在绘图区右上角，避免与底部 x 轴标题抢位置。
+    """
+    L, R, T = 62, 20, 44 if title else 20
+    B = 76 if legend and legend_pos == "bottom" else 46
     all_y = [y for s in series for _, y in s["points"]]
     all_x = [x for s in series for x, _ in s["points"]]
     if not all_y:
         return ""
-    y0, y1 = (ymin, ymax) if ymin is not None and ymax is not None else _nice_bounds(all_y)
+    step = None
+    if ymin is not None and ymax is not None:
+        y0, y1 = ymin, ymax
+        # 显式范围也走 nice step，否则等分出来的刻度会是 -0 / 1 / 1 / 2 这种读不出的值
+        step = _nice_step(y1 - y0, 5)
+    else:
+        lo, hi = min(all_y), max(all_y)
+        if hi - lo < 1e-9:
+            hi = lo + 1.0
+        pad = (hi - lo) * 0.08
+        step = _nice_step((hi + pad) - (lo - pad), 4)
+        y0 = math.floor((lo - pad) / step) * step
+        y1 = math.ceil((hi + pad) / step) * step
     x0, x1 = min(all_x), max(all_x)
     if x1 - x0 < 1e-9:
         x1 = x0 + 1
@@ -361,13 +389,33 @@ def line_chart(series, title="", xlabel="", ylabel="", width=680, height=280,
     b = []
     if title:
         b.append(f'<text x="{L}" y="24" font-size="14" font-weight="500" fill="{INK}">{_esc(title)}</text>')
-    for i in range(5):
-        v = y0 + (y1 - y0) * i / 4
+    if step:
+        ticks, v = [], math.ceil(y0 / step - 1e-9) * step
+        while v <= y1 + step * 1e-6:
+            ticks.append(v)
+            v += step
+    else:
+        ticks = [y0 + (y1 - y0) * i / 4 for i in range(5)]
+    fmt = "{:.0f}" if not step or step >= 1 else ("{:.1f}" if step >= 0.1 else "{:.2f}")
+    for v in ticks:
         y = py(v)
         b.append(f'<line x1="{L}" y1="{y:.1f}" x2="{L + pw}" y2="{y:.1f}" stroke="{GRID}" stroke-width="0.5"/>')
-        b.append(f'<text x="{L - 8}" y="{y + 4:.1f}" font-size="11" fill="{MUTED}" text-anchor="end">{v:.2g}</text>')
-    b.append(f'<text x="{L}" y="{T + ph + 30}" font-size="11" fill="{MUTED}" text-anchor="middle" '
-             f'transform="translate({pw / 2 - L / 2},0)">{_esc(xlabel)}</text>')
+        b.append(f'<text x="{L - 8}" y="{y + 4:.1f}" font-size="11" fill="{MUTED}" text-anchor="end">{fmt.format(v)}</text>')
+    # x 轴与刻度：没有刻度的时间轴读不出时长，波形图的横轴形同虚设
+    b.append(f'<line x1="{L}" y1="{T + ph}" x2="{L + pw}" y2="{T + ph}" stroke="{MUTED}" stroke-width="0.8"/>')
+    xstep = _nice_step(x1 - x0, 5)
+    xv = math.ceil(x0 / xstep) * xstep
+    xfmt = "{:.0f}" if xstep >= 1 else ("{:.1f}" if xstep >= 0.1 else "{:.2f}")
+    while xv <= x1 + xstep * 1e-6:
+        x = px(xv)
+        b.append(f'<line x1="{x:.1f}" y1="{T + ph}" x2="{x:.1f}" y2="{T + ph + 4}" '
+                 f'stroke="{MUTED}" stroke-width="0.8"/>')
+        b.append(f'<text x="{x:.1f}" y="{T + ph + 16}" font-size="10.5" fill="{MUTED}" '
+                 f'text-anchor="middle">{xfmt.format(xv)}</text>')
+        xv += xstep
+    if xlabel:
+        b.append(f'<text x="{L + pw / 2}" y="{T + ph + (64 if B > 50 else 30)}" font-size="11" '
+                 f'fill="{MUTED}" text-anchor="middle">{_esc(xlabel)}</text>')
     if ylabel:
         b.append(f'<text x="14" y="{T + ph / 2}" font-size="11" fill="{MUTED}" text-anchor="middle" '
                  f'transform="rotate(-90 14 {T + ph / 2})">{_esc(ylabel)}</text>')
@@ -377,9 +425,15 @@ def line_chart(series, title="", xlabel="", ylabel="", width=680, height=280,
         b.append(f'<polyline points="{pts}" fill="none" stroke="{color}" stroke-width="1.8" '
                  f'stroke-linejoin="round"/>')
         if legend:
-            lx = L + idx * 132
-            b.append(f'<rect x="{lx}" y="{T + ph + 14}" width="10" height="10" rx="2" fill="{color}"/>')
-            b.append(f'<text x="{lx + 15}" y="{T + ph + 23}" font-size="11" fill="{MUTED}">{_esc(s["name"])}</text>')
+            if legend_pos == "top-right":
+                # 右上图例按行竖排：横排时相邻两项的文字会互相压住
+                lx = L + pw - 168
+                ly = T + 4 + idx * 17
+            else:
+                lx = L + idx * 132
+                ly = T + ph + 32
+            b.append(f'<rect x="{lx}" y="{ly}" width="10" height="10" rx="2" fill="{color}"/>')
+            b.append(f'<text x="{lx + 15}" y="{ly + 9}" font-size="11" fill="{MUTED}">{_esc(s["name"])}</text>')
     return "".join(b)
 
 
@@ -431,7 +485,7 @@ def radar_chart(categories, series, title="", width=680, height=340, vmax=None,
     #   标签统一画在 1.14r 处，dy 系数 = 1.14·sin(-90° + 360°·i/n)
     #   上极值 = 1.14·|min dy|，下极值 = 1.14·max dy，再加字号余量。
     title_h = 44 if title else 10
-    legend_h = 50 if limits else 32
+    legend_h = 78 if limits else 32
     usable_h = height - title_h - legend_h
     dys = [1.14 * math.sin(-math.pi / 2 + 2 * math.pi * i / max(len(categories), 1))
            for i in range(len(categories))]
@@ -523,16 +577,18 @@ def radar_chart(categories, series, title="", width=680, height=340, vmax=None,
         for i, v in enumerate(s["values"]):
             ang = -math.pi / 2 + 2 * math.pi * i / n
             slot = rank[(idx, i)]
-            # 槽位 0 = 最外圈；步长 0.075 保证相邻槽位至少差一个标签高度
-            rad = val_ratio(v) + 0.075 + (n_slot - 1 - slot) * 0.075
+            # 槽位 0 = 最外圈；径向步长 0.09 保证相邻槽位至少差一个标签高度
+            rad = val_ratio(v) + 0.075 + (n_slot - 1 - slot) * 0.09
             vx, vy = pt_ang(i, ang, min(rad, 0.985))
-            # 切向再拉开一点，彻底避免相邻槽位的字边缘相碰
+            # 切向拉开 16 px；对齐方式按偏移方向取 start/end，
+            # 让标签从数据点向两侧展开，而不是三个都居中压在同一点上
             tx, ty = -math.sin(ang), math.cos(ang)
-            vx += tx * (slot - (n_slot - 1) / 2.0) * 10.0
-            vy += ty * (slot - (n_slot - 1) / 2.0) * 10.0
-            vx = min(max(vx, 22), width - 22)
+            shift = (slot - (n_slot - 1) / 2.0) * 16.0
+            vx += tx * shift
+            vy += ty * shift
+            vx = min(max(vx, 26), width - 26)
             vy = min(max(vy, 38), height - 44)
-            anchor = "middle" if abs(vx - cx) < 20 else ("start" if vx > cx else "end")
+            anchor = "start" if vx > x + 2 else ("end" if vx < x - 2 else "middle")
             b.append(f'<text x="{vx:.1f}" y="{vy + 3:.1f}" font-size="9" fill="{color}" '
                      f'font-weight="600" text-anchor="{anchor}">{value_fmt.format(v)}</text>')
 
@@ -545,7 +601,7 @@ def radar_chart(categories, series, title="", width=680, height=340, vmax=None,
         color = s.get("color") or PALETTE[idx % len(PALETTE)]
         row, col = divmod(idx, per_row)
         lx = 24 + col * 140
-        ly = height - 40 + row * 18
+        ly = height - legend_h + 8 + row * 18
         b.append(f'<rect x="{lx}" y="{ly}" width="10" height="10" rx="2" fill="{color}"/>')
         b.append(f'<text x="{lx + 15}" y="{ly + 9}" font-size="11" fill="{MUTED}">{_esc(s["name"])}</text>')
         if limits and idx < len(limits) and limits[idx] is not None:
@@ -587,9 +643,11 @@ def fsm_diagram(states, transitions, title="", width=680, height=420, footnote="
                  f'text-anchor="middle">{_esc(s.get("light", ""))}</text>')
         # 条件说明分两行排，避免长文本溢出方框
         cond = s.get("cond", "")
-        half = len(cond) // 2
-        if len(cond) > 14:
-            c1, c2 = cond[:half], cond[half:]
+        if len(cond) > 16:
+            # 优先在空格处换行，硬切会把 "B+3 < Leq" 断成 "B+3 < L" / "eq ≤ B+8"
+            gaps = [i for i, ch in enumerate(cond) if ch == " " and 3 <= i <= len(cond) - 3]
+            cut = min(gaps, key=lambda i: abs(i - len(cond) / 2)) if gaps else len(cond) // 2
+            c1, c2 = cond[:cut], cond[cut:].lstrip()
         else:
             c1, c2 = cond, ""
         b.append(f'<text x="{x + box_w / 2:.1f}" y="{y0 + 58}" font-size="9" fill="{MUTED}" '
@@ -652,11 +710,11 @@ def fsm_diagram(states, transitions, title="", width=680, height=420, footnote="
     lg = [("升级路径（连续 3 帧确认）", "#C2410C", "solid"),
           ("降级路径（连续 5 帧 + 滞回带）", "#0F766E", "dash"),
           ("瞬时事件（单次触发）", "#7C2D12", "dash")]
-    ly0 = height - 42
+    ly0 = height - 58
     for i, (txt, col, _) in enumerate(lg):
         y = ly0 + i * 15
-        b.append(f'<line x1="24" y1="{y}" x2="46" y2="{y}" stroke="{col}" stroke-width="1.5" '
-                 f'{"stroke-dasharray=\"4 3\"" if i == 1 else ""}/>')
+        dash = ' stroke-dasharray="4 3"' if i >= 1 else ""
+        b.append(f'<line x1="24" y1="{y}" x2="46" y2="{y}" stroke="{col}" stroke-width="1.5"{dash}/>')
         b.append(f'<text x="52" y="{y + 3}" font-size="9" fill="{MUTED}">{_esc(txt)}</text>')
     if footnote:
         b.append(f'<text x="{width - 24}" y="{height - 12}" font-size="9" fill="{MUTED}" '
