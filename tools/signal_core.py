@@ -142,7 +142,9 @@ def spectrum(signal, sample_rate, n_fft=None):
     m = len(signal)
     if m < 4:
         return [], []
-    win = [signal[i] * (0.5 - 0.5 * math.cos(2 * math.pi * i / (m - 1))) for i in range(m)]
+    w = [0.5 - 0.5 * math.cos(2 * math.pi * i / (m - 1)) for i in range(m)]
+    cg = sum(w)            # 窗相干增益（Hann 为 m/2）：单边幅度 = 2|X|/sum(w)
+    buf = [signal[i] * w[i] for i in range(m)]
     n = 1
     while n < m:
         n <<= 1
@@ -151,10 +153,10 @@ def spectrum(signal, sample_rate, n_fft=None):
         while k < max(m, n_fft):
             k <<= 1
         n = k
-    win += [0.0] * (n - m)
-    sp = fft(win)
+    buf += [0.0] * (n - m)
+    sp = fft(buf)
     half = n // 2
-    mags = [abs(sp[k]) * 2.0 / m for k in range(half)]
+    mags = [abs(sp[k]) * 2.0 / cg for k in range(half)]
     freqs = [k * sample_rate / n for k in range(half)]
     return freqs, mags
 
@@ -184,6 +186,8 @@ def spectral_features(signal, sample_rate, n_fft=None):
     logs = [math.log(m + 1e-12) for m in mags[1:]]
     feats["flatness"] = math.exp(mean(logs)) / (mean(mags[1:]) + 1e-12)
     nyq = sample_rate / 2.0
+    # band1–4 是各频段的**幅度和**占比（线性谱），不是幅度平方的能量；
+    # 能量口径见 band_energy_ratios()，两者数值不可互相引用。
     for i in range(4):
         lo, hi = nyq * i / 4.0, nyq * (i + 1) / 4.0
         feats[f"band{i + 1}"] = sum(m for f, m in zip(freqs, mags) if lo <= f < hi) / total
@@ -350,6 +354,20 @@ def _nice_step(span, target=4):
     return 10 * mag
 
 
+def _tick_fmt(step):
+    """按刻度间隔决定小数位：0.004 要 3 位，0.25 要 2 位，0.5 要 1 位。
+
+    原先按 step 大小分三档（>=1 取整、>=0.1 一位、其余两位），幅度谱这类
+    0.000–0.01 量级的图会全被写成 0.00/0.01，刻度形同没有。
+    """
+    if not step or step >= 1:
+        return "{:.0f}"
+    for d in (1, 2, 3):
+        if abs(round(step, d) - step) <= step * 1e-6:
+            return "{:." + str(d) + "f}"
+    return "{:.3f}"
+
+
 def line_chart(series, title="", xlabel="", ylabel="", width=680, height=280,
                ymin=None, ymax=None, legend=True, legend_pos="bottom"):
     """series: [{'name':str,'points':[(x,y)...],'color':str}, ...]
@@ -375,6 +393,10 @@ def line_chart(series, title="", xlabel="", ylabel="", width=680, height=280,
         step = _nice_step((hi + pad) - (lo - pad), 4)
         y0 = math.floor((lo - pad) / step) * step
         y1 = math.ceil((hi + pad) / step) * step
+        # 全为非负量（幅度谱、能量占比等）时不要画出负区间：轴底 −0.005 会让
+        # 读者以为存在负幅度，也白白压掉一截绘图高度。
+        if lo >= 0 and y0 < 0:
+            y0 = 0.0
     x0, x1 = min(all_x), max(all_x)
     if x1 - x0 < 1e-9:
         x1 = x0 + 1
@@ -396,7 +418,7 @@ def line_chart(series, title="", xlabel="", ylabel="", width=680, height=280,
             v += step
     else:
         ticks = [y0 + (y1 - y0) * i / 4 for i in range(5)]
-    fmt = "{:.0f}" if not step or step >= 1 else ("{:.1f}" if step >= 0.1 else "{:.2f}")
+    fmt = _tick_fmt(step)
     for v in ticks:
         y = py(v)
         b.append(f'<line x1="{L}" y1="{y:.1f}" x2="{L + pw}" y2="{y:.1f}" stroke="{GRID}" stroke-width="0.5"/>')
@@ -405,7 +427,7 @@ def line_chart(series, title="", xlabel="", ylabel="", width=680, height=280,
     b.append(f'<line x1="{L}" y1="{T + ph}" x2="{L + pw}" y2="{T + ph}" stroke="{MUTED}" stroke-width="0.8"/>')
     xstep = _nice_step(x1 - x0, 5)
     xv = math.ceil(x0 / xstep) * xstep
-    xfmt = "{:.0f}" if xstep >= 1 else ("{:.1f}" if xstep >= 0.1 else "{:.2f}")
+    xfmt = _tick_fmt(xstep)
     while xv <= x1 + xstep * 1e-6:
         x = px(xv)
         b.append(f'<line x1="{x:.1f}" y1="{T + ph}" x2="{x:.1f}" y2="{T + ph + 4}" '

@@ -167,29 +167,26 @@ def history_md(date, title, items, evidence):
 """
 
 
-def git_first_add_dates():
-    """一次性解析 git log，得到每个文件首次加入仓库的日期。"""
-    mapping = {}
+def git_first_add_date(rel):
+    """单个文件的首次加入日期；`--follow` 让目录改名后的文件仍能追到原始提交。
+
+    目录骨架改过名（如 02_Stage2_* → 02-20Days-Challenge），若按新路径直接查
+    `--diff-filter=A`，改名前的添加记录对不上新路径，日期会全部退化成「待核对」。
+    """
     try:
         r = subprocess.run(
-            ["git", "log", "--diff-filter=A", "--name-only",
-             "--format=@@%ad", "--date=short"],
+            ["git", "log", "--follow", "--diff-filter=A", "--format=%ad",
+             "--date=short", "--", rel],
             cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
-        cur = ""
-        for line in r.stdout.splitlines():
-            line = line.strip()
-            if line.startswith("@@"):
-                cur = line[2:].strip()
-            elif line and cur:
-                mapping[line] = cur
+        dates = [x.strip() for x in r.stdout.splitlines() if x.strip()]
+        return dates[-1] if dates else ""
     except Exception as e:
-        print("  git 历史解析失败，日期列留待核对：", e)
-    return mapping
+        print(f"  git 历史解析失败（{rel}），日期留待核对：", e)
+        return ""
 
 
 def make_experiment_log():
     import wave
-    dates = git_first_add_dates()
     cond = {"low": "正常低速", "high": "正常高速", "friction": "摩擦异常",
             "block": "进风遮挡", "imbalance": "扇叶失衡"}
     rows = []
@@ -208,7 +205,7 @@ def make_experiment_log():
             rows.append({
                 "sample_id": f"{key}-{i:02d}", "condition": key, "condition_cn": label,
                 "file": f"{key}-15/{key}-{i}.wav",
-                "date_recorded": dates.get(rel, "待核对"),
+                "date_recorded": git_first_add_date(rel) or "待核对",
                 "duration_s": dur, "sample_rate": rate, "channels": ch, "bit_depth": sw,
                 "mic_distance_cm": "3-5", "device": "OPPO Reno 15 内置麦克风",
                 "photo": "", "note": "日期取自 git 首次提交时间，如与拍摄时间不符请照实修正",
@@ -275,7 +272,7 @@ def make_protocol():
 
 
 def main():
-    logs = ROOT / "process_logs"
+    logs = ROOT / "02-20Days-Challenge" / "process_logs"
     logs.mkdir(exist_ok=True)
     for date, week, n, title, goals, outputs, commit in DAYS:
         p = logs / f"{date}.md"
