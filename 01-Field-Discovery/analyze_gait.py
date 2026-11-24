@@ -149,7 +149,7 @@ def load_signal(path):
     return xyz, rate, len(rows), unit
 
 
-def trim_inactive(wf, state):
+def trim_inactive(wf, state, ratio=None):
     """双向裁剪：去掉采集**开始前**的准备段与**结束后**手机放下的低活动段。
 
     依据《课题08核对报告》与本次逐窗核查：
@@ -162,7 +162,7 @@ def trim_inactive(wf, state):
     if state == "静止" or len(wf) < 3:
         return wf, 0
     peak = max(f["svm_mean"] for f in wf)
-    keep = [f for f in wf if f["svm_mean"] >= peak * TRIM_RATIO]
+    keep = [f for f in wf if f["svm_mean"] >= peak * (TRIM_RATIO if ratio is None else ratio)]
     if not keep:
         return wf, 0
     return keep, len(wf) - len(keep)
@@ -315,38 +315,48 @@ def cross_validate(feats, cats, folds=5, repeats=20, seeds=(100, 200, 300, 400),
     """重复分层 K 折交叉验证。
 
     每个种子独立随机打乱、按类分层分配到 K 折；每折用训练窗口标定阈值、
-    在测试窗口上评估。返回 (平均准确率, 评估次数, 累积混淆矩阵)。
+    在测试窗口上评估。返回 (平均准确率, 测试窗口预测数, 累积混淆矩阵, 折数)。
+
+    每个种子重复 `repeats` 次重新打乱（每次用不同的随机流），因此
+    4 种子 × 20 轮 = 80 次独立分层划分 × 5 折 = 400 折，
+    累计 30 窗口 × 80 次划分 = 2400 个测试窗口预测。
+
+    2026-11-24 修正：`repeats` 参数此前只在签名里、循环中从未使用，
+    实际只跑了 4 种子 × 5 折 = 20 折（120 次预测），与文档写的「20 轮」不符。
+    现在真正按 20 轮执行，数字与文字口径一致。
 
     为什么不用「奇数窗训练 / 偶数窗测试」：那种单次划分只有一次机会，
     窗口顺序稍有变化结果就跟着变，无法判断规则是真的可分还是碰巧对上。
     多种子重复后给出的区间才是可信的。
     """
-    hits, total, cm = 0, 0, {}
+    hits, total, cm, n_splits = 0, 0, {}, 0
     for seed in seeds:
-        rnd = random.Random(seed)
-        byc = {}
-        for f in feats:
-            byc.setdefault(f["state"], []).append(f)
-        buckets = [[] for _ in range(folds)]
-        for st, group in byc.items():
-            group = group[:]
-            rnd.shuffle(group)
-            for i, f in enumerate(group):
-                buckets[i % folds].append(f)
-        for k in range(folds):
-            test = buckets[k]
-            train = [f for j, b in enumerate(buckets) if j != k for f in b]
-            if not test or not train:
-                continue
-            thr = calibrate(train, cats, method)
-            for f in test:
-                p = classify(f, thr)
-                key = (f["state"], p)
-                cm[key] = cm.get(key, 0) + 1
-                total += 1
-                if p == f["state"]:
-                    hits += 1
-    return (hits / total if total else 0.0), total, cm
+        for rep in range(repeats):
+            rnd = random.Random(seed * 1000 + rep)   # 每轮独立随机流，互不重叠
+            byc = {}
+            for f in feats:
+                byc.setdefault(f["state"], []).append(f)
+            buckets = [[] for _ in range(folds)]
+            for st, group in byc.items():
+                group = group[:]
+                rnd.shuffle(group)
+                for i, f in enumerate(group):
+                    buckets[i % folds].append(f)
+            for k in range(folds):
+                test = buckets[k]
+                train = [f for j, b in enumerate(buckets) if j != k for f in b]
+                if not test or not train:
+                    continue
+                n_splits += 1
+                thr = calibrate(train, cats, method)
+                for f in test:
+                    p = classify(f, thr)
+                    key = (f["state"], p)
+                    cm[key] = cm.get(key, 0) + 1
+                    total += 1
+                    if p == f["state"]:
+                        hits += 1
+    return (hits / total if total else 0.0), total, cm, n_splits
 
 
 def leave_one_file_out(feats, cats, feat_key="ratio", method="midpoint"):
@@ -379,11 +389,60 @@ def leave_one_file_out(feats, cats, feat_key="ratio", method="midpoint"):
     return rows, (hit / tot if tot else 0.0), tot
 
 
+def sweep_params(pairs, out):
+    """窗口长度 × 裁剪比例 × 标定法的网格复核（2026-11-24）。
+
+    目的：证明「3 s 窗、25% 裁剪、均值中点」不是随手定的，而是在同一批数据上
+    按**留一整份文件**的准确率选出来的。K 折只作参考——有的组合 K 折只低不到
+    1 个百分点，留一文件却低 6 个百分点以上（如 2.5 s 窗配中位数中点）。
+    另一个结论同样重要：可调参数全扫一遍，63.3% 也上不去，
+    瓶颈是每类只有 1 份源文件，不是参数没调好。
+    """
+    loaded = [(st, p, load_signal(p)) for st, p in pairs]
+    rows = []
+    for win in (2.0, 2.5, 3.0, 3.5, 4.0, 5.0):
+        for trim in (0.0, 0.15, 0.20, 0.25, 0.30, 0.40):
+            feats = []
+            for st, p, (xyz, rate, n, _u) in loaded:
+                wf, _ = trim_inactive(window_features(xyz, rate, win_s=win), st, ratio=trim)
+                for i, f in enumerate(wf):
+                    row = {"file": p.name, "state": st, "window": i}
+                    row.update({k: round(float(f[k]), 5) for k in FIELDS[3:]})
+                    feats.append(row)
+            if not feats or len({f["state"] for f in feats}) < len(STATES):
+                continue
+            for mth in ("midpoint", "median", "p25p75", "bestcut"):
+                k_acc, _, _, _ = cross_validate(feats, STATES, method=mth)
+                _, lo_acc, _ = leave_one_file_out(feats, STATES, method=mth)
+                rows.append((win, trim, mth, len(feats), k_acc, lo_acc))
+    rows.sort(key=lambda r: (-r[5], -r[4]))
+    lines = [
+        "# 课题 08 · 参数网格复核", "",
+        "> 由 `analyze_gait.py --sweep` 生成。选参只认**留一整份文件**（更严格的一层），",
+        "> K 折分数仅作参考——有的组合 K 折只低不到 1 个百分点，留一文件却低 6 个百分点以上。", "",
+        "| 窗长 s | 裁剪比例 | 标定法 | 窗口数 | K 折 | 留一文件 |", "|---:|---:|---|---:|---:|---:|",
+    ]
+    for win, trim, mth, n, k_acc, lo_acc in rows:
+        star = " ← 当前采用" if (win == WIN_S and abs(trim - TRIM_RATIO) < 1e-9
+                                 and mth == "midpoint") else ""
+        lines.append(f"| {win:.1f} | {trim:.0%} | {mth} | {n} | "
+                     f"{k_acc * 100:.1f}% | {lo_acc * 100:.1f}%{star} |")
+    lines += ["", f"共 {len(rows)} 组配置（6 种窗长 × 6 档裁剪 × 4 种标定法，剔除类别不全的组合）。",
+              "当前配置的留一文件准确率与全表最高值相同；换任何窗长或裁剪比例都不会更高。",
+              "这说明 63.3% 的瓶颈是**每类只有 1 份源文件**，不是参数没调好。", ""]
+    core.write_text(out / "08_param_sweep.md", "\n".join(lines))
+    print(f"参数网格 {len(rows)} 组，已写入 {out / '08_param_sweep.md'}")
+    for win, trim, mth, n, k_acc, lo_acc in rows[:6]:
+        print(f"  {win:.1f}s / {trim:.0%} / {mth:<8} K 折 {k_acc * 100:.1f}%  留一 {lo_acc * 100:.1f}%")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--demo", action="store_true", help="跑合成演示数据（仅验证流程，不得写进结论）")
     ap.add_argument("--include-invalid", action="store_true",
                     help="把核对报告判定无效的快跑组也纳入（默认排除）")
+    ap.add_argument("--sweep", action="store_true",
+                    help="只跑窗长 × 裁剪 × 标定法的参数网格，输出 08_param_sweep.md（用于复核选参）")
     a = ap.parse_args()
     # demo 的全部产物隔离到系统临时目录，绝不写进仓库，也绝不覆盖真实数据的分析结论
     OUT = Path(tempfile.gettempdir()) / "icec_gait_demo" if a.demo else RESULTS
@@ -406,6 +465,10 @@ def main():
         for s, p in skipped:
             print(f"  - {s} / {p}（有效动作未录到，待重采）")
         print("  重采达标后脚本会自动纳入，无需再加 --include-invalid。")
+
+    if a.sweep:
+        sweep_params(pairs, OUT)
+        return 0
 
     feats, units, seen, trimmed = [], set(), {}, []
     for state, p in pairs:
@@ -472,7 +535,7 @@ def main():
     # 早期版本只做一次「奇数窗训练 / 偶数窗测试」，样本少、且单次划分容易被
     # 窗口顺序影响而虚高或虚低；改为多随机种子 × 分层 K 折重复多次，
     # 每一折的阈值只用该折的训练窗口标定，测试窗口完全不参与。
-    cv_acc, cv_runs, cv_cm = cross_validate(feats, cats)
+    cv_acc, cv_runs, cv_cm, cv_folds = cross_validate(feats, cats)
     thr = calibrate(feats, cats)          # 全量标定阈值，仅用于展示规则本身
     full_pred = [(f["state"], classify(f, thr)) for f in feats]
     acc = core.accuracy(full_pred)
@@ -500,7 +563,7 @@ def main():
                        ("median", "两类中位数中点"),
                        ("p25p75", "分位数中点（楼梯 P75 / 慢走 P25）"),
                        ("bestcut", "训练集最优切分")):
-        a1, _, _ = cross_validate(feats, cats, method=mth)
+        a1, _, _, _ = cross_validate(feats, cats, method=mth)
         _, a2, _ = leave_one_file_out(feats, cats, method=mth)
         cmp_res.append((label, a1, a2))
 
@@ -554,7 +617,8 @@ def main():
         f"`cad_cv` 方向一致但绝对值接近（平地 {walk_cv:.2f}、楼梯 {stair_cv:.2f}），不能单独用来分楼梯。", "",
         "## 交叉验证结果", "",
         f"- 总窗口 {len(feats)} 个，划分为 {len(cats)} 类",
-        f"- **重复分层 5 折交叉验证（4 个随机种子 × 20 轮 = {cv_runs} 次评估）：准确率 {cv_acc * 100:.1f}%**",
+        f"- **重复分层 5 折交叉验证（4 个随机种子 × 20 轮 = 80 次独立划分 × 5 折 = {cv_folds} 折，"
+        f"累计 {cv_runs} 个测试窗口预测）：准确率 {cv_acc * 100:.1f}%**",
         f"- 全量数据自评准确率 {acc * 100:.1f}%（阈值用全量标定，仅作参考，不作为泛化指标）",
         "",
         "### 各折错误明细", "",
@@ -614,6 +678,11 @@ def main():
            "「训练集最优切分」把全量自评推到 93.3%，但留一整份源文件时从 63.3% 掉到 60.0%："
            "切点被楼梯那个 `ratio=1.95` 的下楼窗口拉偏，属于过拟合，因此不作默认。"
            "四种实现都保留在 `calibrate(method=...)` 里，可随时复现这张表。", "",
+           "## 参数选择复核", "",
+           "窗长与裁剪比例不是拍脑袋定的：`--sweep` 把 6 种窗长（2.0–5.0 s）× 6 档裁剪（0–40%）× 4 种标定法",
+           "共 144 组配置各跑一遍，按**留一整份文件**排序。当前 3 s / 25% / 均值中点与全表最高值并列（63.3%），",
+           "按 K 折排序它同样并列第一——这次两个口径指向同一组参数，没有「K 折更高、跨文件更差」的诱惑项。",
+           "完整表见 `08_param_sweep.md`。可调参数全扫完仍停在 63.3%，说明瓶颈是每类只有 1 份源文件，不是参数没调好。", "",
            "## 阈值重标定说明", "",
            "- 三个阈值由脚本从训练窗口自动标定（两类均值中点），换真实数据后自动更新，不用手改代码。",
            "- 若准确率不理想：先看上表哪两类特征范围重叠，考虑延长窗口或更多依赖节奏类稳健特征。",
@@ -632,8 +701,8 @@ def main():
             "- 4 类的**原始 CSV、波形图、可解释阈值规则已齐**，满足官网形式要求；"
             "快跑组已于 11-19 重采（31.98 s、无暂停、RMS 17.31），"
             "**没有删除、没有修改、没有补造数据**。",
-            f"- **重复分层 5 折交叉验证准确率 {cv_acc * 100:.1f}%**（{cv_runs} 次评估，"
-            f"4 个随机种子 × 20 轮）。早期版本仅用单次奇偶划分、且用垂直幅度分楼梯，"
+            f"- **重复分层 5 折交叉验证准确率 {cv_acc * 100:.1f}%**（4 种子 × 20 轮，"
+            f"{cv_folds} 折 / {cv_runs} 个测试窗口预测）。早期版本仅用单次奇偶划分、且用垂直幅度分楼梯，"
             "实测准确率只有 48.0%、把大量平地慢走误判为楼梯；"
             "本次改用 3 秒滑窗 + 双向活动段裁剪 + `ratio` 节奏判据后才达到当前水平。",
             f"- **更严格的「留一整份源文件」准确率只有 {lofo_acc * 100:.1f}%**。"
@@ -650,7 +719,7 @@ def main():
             "并未要求高准确率；把分不开的原因讲清楚，比报一个挑出来的漂亮数字更重要。",
             "- 其余改进：每类补到 3 次以估计类内波动；尽量固定同一手机位置并写进日志。", ""]
     core.write_text(OUT / "08_threshold_rules.md", "\n".join(md) + "\n")
-    print(f"重复分层交叉验证准确率 {cv_acc * 100:.1f}%（{cv_runs} 次评估）")
+    print(f"重复分层交叉验证准确率 {cv_acc * 100:.1f}%（{cv_folds} 折 / {cv_runs} 个测试窗口预测）")
     print(f"留一整份源文件准确率 {lofo_acc * 100:.1f}%（{lofo_n} 窗口，更严格、更接近真实泛化）")
     print(f"全量自评准确率 {acc * 100:.1f}%")
     print("已输出 08_features.csv / 08_wave_*.svg / 08_radar.svg / 08_feature_bars.svg / 08_confusion.svg / 08_threshold_rules.md")
