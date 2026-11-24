@@ -46,7 +46,7 @@ def build_items():
 HTML = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8">
+<meta charset="utf-8"/>
 <title>项目三 · 盲测准确率现场演示</title>
 <style>
   :root { --bg:#f6f7fb; --card:#ffffff; --ink:#1b2030; --muted:#6b7280;
@@ -214,7 +214,7 @@ def main():
     html = (HTML.replace("__DATA__", json.dumps(items, ensure_ascii=False))
                 .replace("__NTRAIN__", str(ntrain))
                 .replace("__NTEST__", str(ntest)))
-    (OUT / "盲测演示.html").write_text(html, encoding="utf-8")
+    (OUT / "盲测演示.html").write_text(html, encoding="utf-8", newline="\n")
     hit = sum(1 for d in items if d["ok"])
     print(f"盲测明细 {len(items)} 段 -> blind_test/blind_detail.csv")
     print(f"演示页 -> blind_test/盲测演示.html")

@@ -97,7 +97,7 @@ FFT 为迭代 radix-2 Cooley-Tukey 实现，Hann 窗、8192 点零填充。
 
 ### 3.1 结果文件
 
-全部产物在 `results/` 与 `blind_test/`，逐条对应见[交付清单](./交付清单.md)。核心为：`features.csv`（75 × 11 特征表）、`loo_report.md` / `.svg`（留一法 + 混淆矩阵）、`blind_report*.md`（两轮盲测）、`noise_robustness*.md` / `.svg`（两轮抗噪）、`feature_ablation.md` / `.svg`（消融）、`acoustic_band_limits.md` / `.svg` / `.csv`（频带覆盖）、`envelope_experiment.md` + `envelope_compare.svg` / `envelope_spectrum.svg`（包络试验）。
+全部产物在 `results/` 与 `blind_test/`，逐条对应见[交付清单](./交付清单.md)。核心为：`features.csv`（75 × 11 特征表）、[`loo_report.md`](./results/loo_report.md) / `.svg`（留一法 + 混淆矩阵）、`blind_report*.md`（两轮盲测）、`noise_robustness*.md` / `.svg`（两轮抗噪）、`feature_ablation.md` / `.svg`（消融）、`acoustic_band_limits.md` / `.svg` / [`acoustic_band_limits.csv`](./results/acoustic_band_limits.csv)（频带覆盖，CSV 为 75 段逐段明细）、`envelope_experiment.md` + `envelope_compare.svg` / `envelope_spectrum.svg`（包络试验）。
 
 ### 3.2 幅度谱与留一法
 
@@ -115,10 +115,16 @@ FFT 为迭代 radix-2 Cooley-Tukey 实现，Hann 窗、8192 点零填充。
 
 | 轮次 | 训练段 | 盲测段 | 准确率 | 明细 |
 |---|---|---|---|---|
-| 第一轮 | 每工况 1–12 | 13–15 | 80.0%（12/15） | `blind_test/blind_detail.csv` |
-| 第二轮 | 每工况 4–15 | 1–3 | 93.3%（14/15） | `blind_test/blind_detail_round2.csv` |
+| 第一轮 | 每工况 1–12 | 13–15 | 80.0%（12/15） | [逐段明细](./blind_test/blind_detail.csv) · [混淆矩阵与召回](./results/blind_report.md) |
+| 第二轮 | 每工况 4–15 | 1–3 | 93.3%（14/15） | [逐段明细](./blind_test/blind_detail_round2.csv) · [混淆矩阵与召回](./results/blind_report_round2.md) |
 
 错判段逐条保留：第一轮 `high-13`（正常高速 → 扇叶失衡）、`friction-15`（摩擦 → 扇叶失衡）、`block-13`（遮挡 → 正常高速）；第二轮仅 `high-1`（正常高速 → 扇叶失衡）。未剔除、未事后调参。
+
+两轮的混淆矩阵并排看，错判高度一致：四段错判中有三段被判成「扇叶失衡」，其中两段的真类是「正常高速」——高速档与失衡工况的谱形最接近（转频同在 150 Hz 附近，高频簇都落在 540–780 Hz）。其余三类两轮均未被系统性混淆，正常低速与扇叶失衡两轮召回都为 100%。
+
+![第一轮盲测混淆矩阵](./results/blind_report.svg)
+
+![第二轮盲测混淆矩阵](./results/blind_report_round2.svg)
 
 ### 3.4 抗噪鲁棒性
 
@@ -130,6 +136,8 @@ FFT 为迭代 radix-2 Cooley-Tukey 实现，Hann 窗、8192 点零填充。
 | 第二轮（2/5/8/11/14 段，3 次均值） | 96.0% | 94.7% | 92.0% | 89.3% | 66.7% | 48.0% |
 
 ![抗噪鲁棒性曲线](./results/noise_robustness.svg)
+
+![第二轮抗噪曲线（换抽样段 + 3 次重复加噪）](./results/noise_robustness_round2.svg)
 
 - **拐点一致**：两轮均在 5 dB 开始明显退化（相对干净基线下降 ≥10 pp），0 dB 均降至 48%，趋近五分类随机水平。
 - **绝对值不稳定**：30–10 dB 区间同一信噪比下两轮相差 8–11 pp，大于 3 次重复加噪的随机波动（最大 σ 1.9 pp）。抽样段的影响大于加噪随机性的影响，单轮 25 段的结论不能作精确值引用。

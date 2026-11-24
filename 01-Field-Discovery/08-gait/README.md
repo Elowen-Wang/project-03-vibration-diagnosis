@@ -16,12 +16,14 @@
 
 ```
 raw_data/gait/
-├── 静止/          stationary.csv · stationary.mp4 · meta/{device,time}.csv
-├── 慢走/          walking.csv    · walking.mp4    · meta/
-├── 快跑/          Raw Data.csv   · 2bd3988d….mp4  · meta/     ← 11-19 重采，31.98 s 有效
+├── 静止/          stationary.csv · stationary.mp4  · meta/{device,time}.csv
+├── 慢走/          walking.csv    · walking.mp4     · meta/
+├── 快跑/          Raw Data.csv   · 2bd3988d57a29629831f60efb88f4deb.mp4 · meta/   ← 11-19 重采，31.98 s 有效
 ├── 爬楼梯（慢）/   stairs-slow.csv · stairs-slow.mp4 · meta/
 └── 爬楼梯（快）/   stairs-fast.csv · stairs-fast.mp4 · meta/
 ```
+
+快跑组的 CSV 与 MP4 仍是 phyphox 的默认导出名（`Raw Data.csv`、`2bd3988d….mp4`）：重采当次未改名，为保持原件与 App 记录一致，保留原名不作重命名，对应关系以本表与 `meta/time.csv` 为准。其余四组在归档时统一为语义命名。
 
 每个姿态目录直属的 CSV 为传感器数据；`meta/` 为元数据，不参与特征提取。
 
@@ -53,7 +55,7 @@ raw_data/gait/
 
 **时间依据**：MP4 `creation_time` 为导出时刻，文件修改时间为拷贝时刻，均不可用于对齐；采集时刻只认 `meta/time.csv` 与画面状态栏。录屏与采集独立起停，不做逐秒对齐。
 
-11/16 的三类版本备份在 `../results/archive_1116/`。
+11/16 的三类版本（2 s 窗口、快跑无效）备份在 [`../results/archive_1116/`](../results/archive_1116/)，其中的 [`08_threshold_rules.md`](../results/archive_1116/08_threshold_rules.md) 为当时的 50.0% 版本，只作迭代留档，不作结论依据。
 
 ---
 
