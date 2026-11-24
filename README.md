@@ -24,6 +24,7 @@
 
 | 内容 | 位置 |
 |---|---|
+| 评审导览（读法 · 交付判定 · 结论与证据分级） | [评审说明.md](./评审说明.md) |
 | 第一阶段总报告 | [01-Field-Discovery/README.md](./01-Field-Discovery/README.md) |
 | ├ 课题 06 原始材料与数据登记 | [06-acoustic/README.md](./01-Field-Discovery/06-acoustic/README.md) |
 | └ 课题 08 数据字典与逐组核对 | [08-gait/README.md](./01-Field-Discovery/08-gait/README.md) · [交付清单](./01-Field-Discovery/08-gait/交付清单.md) |
