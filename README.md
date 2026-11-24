@@ -24,6 +24,7 @@
 
 | 内容 | 位置 |
 |---|---|
+| 一页速览（交付物 · 核心指标 · 最大排障 · 出题索引） | [作品速览.md](./作品速览.md) |
 | 评审导览（读法 · 交付判定 · 结论与证据分级） | [评审说明.md](./评审说明.md) |
 | 第一阶段总报告 | [01-Field-Discovery/README.md](./01-Field-Discovery/README.md) |
 | ├ 课题 06 原始材料与数据登记 | [06-acoustic/README.md](./01-Field-Discovery/06-acoustic/README.md) |
@@ -89,7 +90,7 @@
 
 ```
 project-03-vibration-diagnosis/
-├── README.md · 评审说明.md · DAILY_PLAN.md · AI_Chat_Log.md · 提交指引.md
+├── README.md · 作品速览.md · 评审说明.md · DAILY_PLAN.md · AI_Chat_Log.md · 提交指引.md
 ├── 01-Field-Discovery/                    阶段一 · 实地测评（课题 06 + 课题 08）
 │   ├── README.md                          阶段一总报告
 │   ├── raw_data/                          原始件：不改名、不裁剪、不删
